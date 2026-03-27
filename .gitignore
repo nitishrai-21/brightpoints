@@ -1,0 +1,34 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+
+# MyPy and PyTest
+.mypy_cache/
+.pytest_cache/
+
+# VS Code settings
+.vscode/
+
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+
+*.env
+
+uploads/
+node_modules/
+temp/
+sysml_img/
+sysml_xmi/
+.env
+deploy.log
+deploy.sh
+frontend/.env

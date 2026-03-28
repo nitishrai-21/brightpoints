@@ -1,15 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import Base, engine
+from app.api.routes import houses, points, auth, schools
+from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import houses, points, auth
-
+# Create DB tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BrightPoints")
 
 origins = [
-    "http://localhost:5173",
+    "http://localhost:5173",  # Frontend URL
 ]
 
 app.add_middleware(
@@ -20,7 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# routes
-app.include_router(auth.router, prefix="/auth")
+# Routers
+app.include_router(auth.router)
+app.include_router(schools.router)
 app.include_router(houses.router)
 app.include_router(points.router, prefix="/points")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")

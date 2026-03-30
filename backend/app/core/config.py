@@ -1,5 +1,4 @@
 # app/core/config.py
-# app/core/config.py
 import os
 from dotenv import load_dotenv
 
@@ -12,6 +11,8 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    BACKEND_URL: str  = os.getenv("BACKEND_URL", "http://localhost:8000")
 
     def validate(self):
         required = ["DATABASE_URL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SECRET_KEY"]

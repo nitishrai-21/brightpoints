@@ -27,8 +27,9 @@ class User(TimestampMixin, Base):
 
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False)
-    name = Column(String, nullable=False)
-    role = Column(String, default="teacher")  # teacher / student / admin
+    name = Column(String, nullable=True)
+    role = Column(String, default="student")  # teacher / student / admin
+    class_group = Column(String, nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
 
     school = relationship("School", back_populates="users")
@@ -61,20 +62,20 @@ class House(TimestampMixin, Base):
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
 
     logs = relationship("PointsLog", back_populates="house")
-    students = relationship("Student", back_populates="house")
+    # students = relationship("Student", back_populates="house")
     school = relationship("School", back_populates="houses")
 
 
 # ----------------- Student -----------------
-class Student(TimestampMixin, Base):
-    __tablename__ = "students"
+# class Student(TimestampMixin, Base):
+#     __tablename__ = "students"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    class_group = Column(String)  # e.g., 1A / 1B / 1C
-    house_id = Column(Integer, ForeignKey("houses.id"))
+#     id = Column(Integer, primary_key=True)
+#     name = Column(String, nullable=False)
+#     class_group = Column(String)  # e.g., 1A / 1B / 1C
+#     house_id = Column(Integer, ForeignKey("houses.id"))
 
-    house = relationship("House", back_populates="students")
+#     house = relationship("House", back_populates="students")
 
 
 # ----------------- Points Log -----------------

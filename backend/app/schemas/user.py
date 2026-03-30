@@ -17,3 +17,6 @@ class Token(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+class UpdateProfileRequest(BaseModel):
+    display_name: str

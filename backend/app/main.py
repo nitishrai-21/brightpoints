@@ -10,7 +10,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="BrightPoints")
 
 origins = [
-    "http://localhost:5173",  # Frontend URL
+    "*",  # Frontend URL
 ]
 
 app.add_middleware(

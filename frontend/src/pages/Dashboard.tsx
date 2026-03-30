@@ -1,41 +1,41 @@
-// src/pages/Dashboard.tsx
+//src/pages/Dashboard.tsx
+import { useEffect, useState, useCallback } from "react";
 import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-  Button,
-  Avatar,
-  Container,
-  Menu,
-  MenuItem,
-  Divider,
   CircularProgress,
+  Paper,
+  TextField,
+  Button,
+  Alert,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import TeacherView from "./TeacherView";
 import StudentView from "./StudentView";
-import AddPointsDrawer from "../components/AddPointsModal";
+import Profile from "./Profile";
 import SummaryView from "../components/SummaryView";
+import AddPointsDrawer from "../components/AddPointsModal";
+import Layout from "../components/Layout";
 
 interface DashboardProps {
   setAccessToken: (token: string | null) => void;
   setRefreshToken: (token: string | null) => void;
 }
 
-type ViewMode = "summary" | "teacher" | "student";
+type ViewMode = "summary" | "teacher" | "student" | "profile";
 type Role = "teacher" | "student";
 
 export default function Dashboard({
   setAccessToken,
   setRefreshToken,
 }: DashboardProps) {
-  const navigate = useNavigate();
-
   const [view, setView] = useState<ViewMode>("summary");
   const [role, setRole] = useState<Role | null>(null);
+  const [user, setUser] = useState({
+    id: 0,
+    name: "",
+    email: "",
+    role: "",
+    school_id: 0,
+  });
 
   const [houses, setHouses] = useState<any[]>([]);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
@@ -44,18 +44,13 @@ export default function Dashboard({
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-
   const [loading, setLoading] = useState(false);
   const [showAddPoints, setShowAddPoints] = useState(false);
 
-  // Avatar menu
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [user, setUser] = useState<{ name: string; email: string }>({
-    name: "",
-    email: "",
-  });
-
-  const open = Boolean(anchorEl);
+  // Profile state
+  const [displayName, setDisplayName] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   // ---------------- INITIAL LOAD ----------------
   useEffect(() => {
@@ -72,191 +67,120 @@ export default function Dashboard({
     try {
       const res = await api.get("/auth/me");
       const detectedRole = res.data.role?.toLowerCase();
-      if (detectedRole !== "teacher" && detectedRole !== "student") {
-        console.error("Invalid role received:", res.data.role);
-      }
       setRole(detectedRole);
-      setUser({ name: res.data.name, email: res.data.email });
+      setUser(res.data);
+      setDisplayName(res.data.name || "");
     } catch (err) {
-      console.error("Failed to load user info:", err);
+      console.error(err);
     }
   };
 
-  // ---------------- LOAD LOGS ----------------
-  useEffect(() => {
-    if (view === "teacher" && role === "teacher") {
-      loadAllLogs();
-    }
-  }, [view, role]);
+  const loadAllLogs = useCallback(
+    async (
+      houseId?: any,
+      page = 1,
+      limit = pageSize,
+      search = "",
+      teacher = "",
+      minPoints?: number,
+      maxPoints?: number,
+    ) => {
+      setLoading(true);
+      let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(
+        search,
+      )}`;
+      if (houseId) url += `&houseId=${houseId}`;
+      if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
+      if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
+      if (maxPoints !== undefined) url += `&maxPoints=${maxPoints}`;
 
-  const loadAllLogs = async (
-    houseId?: any,
-    page = 1,
-    limit = pageSize,
-    search = "",
-  ) => {
-    setLoading(true);
+      const res = await api.get(url);
+      setLogs(res.data.data);
+      setTotalPages(res.data.total_pages);
+      setTotalItems(res.data.total);
+      setLoading(false);
+    },
+    [pageSize], // only recreate when pageSize changes
+  );
 
-    let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(
-      search,
-    )}`;
-    if (houseId) url += `&houseId=${houseId}`;
-
-    const res = await api.get(url);
-    setLogs(res.data.data);
-    setTotalPages(res.data.total_pages);
-    setTotalItems(res.data.total);
-    setLoading(false);
-  };
-
-  // ---------------- LOGOUT ----------------
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     delete api.defaults.headers.common["Authorization"];
     setAccessToken(null);
     setRefreshToken(null);
-    navigate("/");
   };
 
-  // ---------------- LOADING STATE ----------------
+  const handleNavigate = (viewName: ViewMode) => setView(viewName);
+
+  const handleSaveProfile = async () => {
+    try {
+      await api.put("/auth/me", { name: displayName });
+      setSaved(true);
+      setError("");
+      setUser({ ...user, name: displayName });
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to save display name");
+    }
+  };
+
   if (!role) {
-    return (
-      <Box
-        sx={{
-          height: "100vh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <CircularProgress sx={{ display: "block", mx: "auto", mt: 10 }} />;
   }
 
-  // ---------------- UI ----------------
+  // Navigation buttons
+  const navButtons = [
+    {
+      label: "📊 Summary",
+      active: view === "summary",
+      onClick: () => setView("summary"),
+    },
+    role === "teacher"
+      ? {
+          label: "📋 Points Log",
+          active: view === "teacher",
+          onClick: () => setView("teacher"),
+        }
+      : {
+          label: "🎓 My Points",
+          active: view === "student",
+          onClick: () => setView("student"),
+        },
+  ];
+
   return (
-    <>
-      {/* HEADER */}
-      <AppBar
-        position="static"
-        elevation={0}
-        sx={{ bgcolor: "white", borderBottom: "1px solid #e5e7eb", height: 64 }}
-      >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Typography fontWeight={600} color="black">
-            BrightPoints
-          </Typography>
+    <Layout
+      user={user}
+      onLogout={handleLogout}
+      navButtons={navButtons}
+      onNavigate={handleNavigate}
+    >
+      {view === "summary" && <SummaryView houses={houses} />}
+      {view === "teacher" && role === "teacher" && (
+        <TeacherView
+          // selectedHouse={selectedHouse}
+          logs={logs}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          setPageSize={setPageSize}
+          loadLogs={loadAllLogs}
+          loading={loading}
+          houses={houses}
+          // setSelectedHouse={setSelectedHouse}
+          onAddPoints={() => setShowAddPoints(true)}
+        />
+      )}
+      {view === "student" && role === "student" && (
+        <StudentView houses={houses} />
+      )}
+      {view === "profile" && (
+        <Profile
+          user={user}
+          onUserUpdate={(updatedUser) => setUser(updatedUser)}
+        />
+      )}
 
-          {/* NAVIGATION */}
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              bgcolor: "#f3f4f6",
-              p: "6px",
-              borderRadius: "12px",
-            }}
-          >
-            <Button
-              variant={view === "summary" ? "contained" : "text"}
-              onClick={() => setView("summary")}
-            >
-              📊 Summary
-            </Button>
-
-            {role === "teacher" && (
-              <Button
-                variant={view === "teacher" ? "contained" : "text"}
-                onClick={() => setView("teacher")}
-              >
-                📋 Points Log
-              </Button>
-            )}
-
-            {role === "student" && (
-              <Button
-                variant={view === "student" ? "contained" : "text"}
-                onClick={() => setView("student")}
-              >
-                🎓 My Points
-              </Button>
-            )}
-          </Box>
-
-          {/* AVATAR */}
-          <Box>
-            <Avatar
-              sx={{ bgcolor: "#1976d2", cursor: "pointer" }}
-              onClick={(event) => setAnchorEl(event.currentTarget)}
-            >
-              {user.name
-                ? `${user.name.split(" ")[0][0]}${
-                    user.name.split(" ").slice(-1)[0][0]
-                  }`
-                : "U"}
-            </Avatar>
-
-            <Menu
-              anchorEl={anchorEl}
-              open={open}
-              onClose={() => setAnchorEl(null)}
-            >
-              <Box sx={{ px: 2, py: 1.5 }}>
-                <Typography fontWeight={600}>{user.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {user.email}
-                </Typography>
-              </Box>
-
-              <Divider />
-              <MenuItem
-                onClick={() => {
-                  navigate("/profile");
-                  setAnchorEl(null);
-                }}
-              >
-                Profile
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>Logout</MenuItem>
-            </Menu>
-          </Box>
-        </Toolbar>
-      </AppBar>
-
-      {/* CONTENT */}
-      <Container maxWidth="lg" sx={{ mt: 1 }}>
-        <Box sx={{ bgcolor: "white", p: 3, borderRadius: 2 }}>
-          {view === "summary" && (
-            <>
-              <SummaryView houses={houses} />
-            </>
-          )}
-
-          {view === "teacher" && role === "teacher" && (
-            <TeacherView
-              selectedHouse={selectedHouse}
-              logs={logs}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              pageSize={pageSize}
-              setPageSize={setPageSize}
-              loadLogs={loadAllLogs}
-              loading={loading}
-              houses={houses}
-              setSelectedHouse={setSelectedHouse}
-              onAddPoints={() => setShowAddPoints(true)}
-            />
-          )}
-
-          {view === "student" && role === "student" && (
-            <StudentView houses={houses} />
-          )}
-        </Box>
-      </Container>
-
-      {/* DRAWER */}
       {role === "teacher" && (
         <AddPointsDrawer
           open={showAddPoints}
@@ -266,6 +190,6 @@ export default function Dashboard({
           onSuccess={() => loadAllLogs(selectedHouse?.id)}
         />
       )}
-    </>
+    </Layout>
   );
 }

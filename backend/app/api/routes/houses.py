@@ -1,5 +1,5 @@
 #app/api/routes/houses.py
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 import os
 import shutil
@@ -35,8 +35,10 @@ def get_house(house_id: int, current_user: User = Depends(get_current_user), db:
 
 @router.post("")
 def create_house(
-    name: str,
-    description: str = None,
+    name: str = Form(...),
+    motto: str = Form(...),
+    color: str = Form(...),
+    description: str = Form(None),
     logo: UploadFile = File(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -61,6 +63,8 @@ def create_house(
 
     house = House(
         name=name,
+        motto=motto,
+        class_color=color,
         description=description,
         total_points=0,
         logo_url=logo_filename,

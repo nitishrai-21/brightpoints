@@ -7,13 +7,7 @@ import {
   Avatar,
   Stack,
 } from "@mui/material";
-
-interface House {
-  id: number;
-  name: string;
-  total_points: number;
-  logo_url?: string;
-}
+import type { House } from "../types";
 
 interface StudentViewProps {
   houses: House[];

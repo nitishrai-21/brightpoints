@@ -47,7 +47,7 @@ def get_logs(
     db: Session = Depends(get_db),
 ):
     offset = (page - 1) * limit
-    query = db.query(PointsLog).join(PointsLog.teacher)
+    query = db.query(PointsLog).join(PointsLog.teacher).join(PointsLog.house)
 
     # ---------------- Tenant Isolation ----------------
     query = query.filter(House.school_id == current_user.school_id)

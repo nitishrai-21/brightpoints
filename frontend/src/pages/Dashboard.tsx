@@ -1,56 +1,47 @@
-//src/pages/Dashboard.tsx
+// src/pages/Dashboard.tsx
 import { useEffect, useState, useCallback } from "react";
 import {
-  CircularProgress,
-  Paper,
-  TextField,
-  Button,
-  Alert,
-} from "@mui/material";
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import { CircularProgress } from "@mui/material";
+
 import { api } from "../api/client";
 import TeacherView from "./TeacherView";
 import StudentView from "./StudentView";
+import HouseDetails from "./HouseDetails";
 import Profile from "./Profile";
 import SummaryView from "../components/SummaryView";
 import AddPointsDrawer from "../components/AddPointsModal";
 import Layout from "../components/Layout";
-
-interface DashboardProps {
-  setAccessToken: (token: string | null) => void;
-  setRefreshToken: (token: string | null) => void;
-}
-
-type ViewMode = "summary" | "teacher" | "student" | "profile";
-type Role = "teacher" | "student";
+import type { House, Log, User, DashboardProps, Role } from "../types";
 
 export default function Dashboard({
   setAccessToken,
   setRefreshToken,
 }: DashboardProps) {
-  const [view, setView] = useState<ViewMode>("summary");
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [role, setRole] = useState<Role | null>(null);
-  const [user, setUser] = useState({
+  const [user, setUser] = useState<User>({
     id: 0,
     name: "",
     email: "",
-    role: "",
+    role: "student",
     school_id: 0,
   });
 
-  const [houses, setHouses] = useState<any[]>([]);
-  const [selectedHouse, setSelectedHouse] = useState<any>(null);
-
-  const [logs, setLogs] = useState<any[]>([]);
+  const [houses, setHouses] = useState<House[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [showAddPoints, setShowAddPoints] = useState(false);
-
-  // Profile state
-  const [displayName, setDisplayName] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
 
   // ---------------- INITIAL LOAD ----------------
   useEffect(() => {
@@ -59,17 +50,20 @@ export default function Dashboard({
   }, []);
 
   const loadHouses = async () => {
-    const res = await api.get("/houses");
-    setHouses(res.data);
+    try {
+      const res = await api.get<House[]>("/houses");
+      setHouses(res.data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get("/auth/me");
-      const detectedRole = res.data.role?.toLowerCase();
+      const res = await api.get<User>("/auth/me");
+      const detectedRole = res.data.role.toLowerCase() as Role;
       setRole(detectedRole);
       setUser(res.data);
-      setDisplayName(res.data.name || "");
     } catch (err) {
       console.error(err);
     }
@@ -77,7 +71,7 @@ export default function Dashboard({
 
   const loadAllLogs = useCallback(
     async (
-      houseId?: any,
+      houseId?: number,
       page = 1,
       limit = pageSize,
       search = "",
@@ -86,21 +80,28 @@ export default function Dashboard({
       maxPoints?: number,
     ) => {
       setLoading(true);
-      let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(
-        search,
-      )}`;
-      if (houseId) url += `&houseId=${houseId}`;
-      if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
-      if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
-      if (maxPoints !== undefined) url += `&maxPoints=${maxPoints}`;
+      try {
+        let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
+        if (houseId) url += `&houseId=${houseId}`;
+        if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
+        if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
+        if (maxPoints !== undefined) url += `&maxPoints=${maxPoints}`;
 
-      const res = await api.get(url);
-      setLogs(res.data.data);
-      setTotalPages(res.data.total_pages);
-      setTotalItems(res.data.total);
-      setLoading(false);
+        const res = await api.get<{
+          data: Log[];
+          total_pages: number;
+          total: number;
+        }>(url);
+        setLogs(res.data.data);
+        setTotalPages(res.data.total_pages);
+        setTotalItems(res.data.total);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     },
-    [pageSize], // only recreate when pageSize changes
+    [pageSize],
   );
 
   const handleLogout = () => {
@@ -111,83 +112,80 @@ export default function Dashboard({
     setRefreshToken(null);
   };
 
-  const handleNavigate = (viewName: ViewMode) => setView(viewName);
-
-  const handleSaveProfile = async () => {
-    try {
-      await api.put("/auth/me", { name: displayName });
-      setSaved(true);
-      setError("");
-      setUser({ ...user, name: displayName });
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to save display name");
-    }
-  };
-
   if (!role) {
     return <CircularProgress sx={{ display: "block", mx: "auto", mt: 10 }} />;
   }
 
-  // Navigation buttons
+  // ---------------- NAV BUTTONS ----------------
   const navButtons = [
     {
       label: "📊 Summary",
-      active: view === "summary",
-      onClick: () => setView("summary"),
+      active: location.pathname === "/dashboard",
+      onClick: () => navigate("/dashboard"),
     },
     role === "teacher"
       ? {
           label: "📋 Points Log",
-          active: view === "teacher",
-          onClick: () => setView("teacher"),
+          active: location.pathname === "/dashboard/teacher",
+          onClick: () => navigate("/dashboard/teacher"),
         }
       : {
           label: "🎓 My Points",
-          active: view === "student",
-          onClick: () => setView("student"),
+          active: location.pathname === "/dashboard/student",
+          onClick: () => navigate("/dashboard/student"),
         },
   ];
 
   return (
-    <Layout
-      user={user}
-      onLogout={handleLogout}
-      navButtons={navButtons}
-      onNavigate={handleNavigate}
-    >
-      {view === "summary" && <SummaryView houses={houses} />}
-      {view === "teacher" && role === "teacher" && (
-        <TeacherView
-          // selectedHouse={selectedHouse}
-          logs={logs}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          pageSize={pageSize}
-          setPageSize={setPageSize}
-          loadLogs={loadAllLogs}
-          loading={loading}
-          houses={houses}
-          // setSelectedHouse={setSelectedHouse}
-          onAddPoints={() => setShowAddPoints(true)}
+    <Layout user={user} onLogout={handleLogout} navButtons={navButtons}>
+      <Routes>
+        <Route path="/" element={<SummaryView houses={houses} />} />
+        <Route
+          path="house/:id"
+          element={
+            <HouseDetails
+              onAddPoints={() => setShowAddPoints(true)}
+              role={role}
+            />
+          }
         />
-      )}
-      {view === "student" && role === "student" && (
-        <StudentView houses={houses} />
-      )}
-      {view === "profile" && (
-        <Profile
-          user={user}
-          onUserUpdate={(updatedUser) => setUser(updatedUser)}
+        <Route
+          path="teacher"
+          element={
+            role === "teacher" && (
+              <TeacherView
+                logs={logs}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                setPageSize={setPageSize}
+                loadLogs={loadAllLogs}
+                loading={loading}
+                houses={houses}
+                onAddPoints={() => setShowAddPoints(true)}
+                role="teacher"
+                user={user}
+              />
+            )
+          }
         />
-      )}
+        <Route
+          path="student"
+          element={role === "student" && <StudentView houses={houses} />}
+        />
+        <Route
+          path="profile"
+          element={<Profile user={user} onUserUpdate={setUser} />}
+        />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
 
       {role === "teacher" && (
         <AddPointsDrawer
           open={showAddPoints}
           onClose={() => setShowAddPoints(false)}
+          refreshLogs={() => loadAllLogs()}
           houses={houses}
-          houseId={selectedHouse?.id}
-          onSuccess={() => loadAllLogs(selectedHouse?.id)}
         />
       )}
     </Layout>

@@ -25,7 +25,9 @@ export default function CreateHouseModal({
   onCreated,
 }: CreateHouseModalProps) {
   const [name, setName] = useState("");
+  const [motto, setMotto] = useState("");
   const [description, setDescription] = useState("");
+  const [classColor, setClassColor] = useState("#6366f1");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -45,6 +47,8 @@ export default function CreateHouseModal({
     const formData = new FormData();
     formData.append("name", name);
     formData.append("description", description);
+    formData.append("motto", motto);
+    formData.append("color", classColor);
     if (logoFile) formData.append("logo", logoFile);
 
     await api.post("/houses", formData, {
@@ -79,7 +83,7 @@ export default function CreateHouseModal({
           }}
         >
           <Typography fontWeight={600} fontSize={16}>
-            Create House
+            Add Class
           </Typography>
           <IconButton size="small" onClick={onClose}>
             <CloseIcon fontSize="small" />
@@ -89,24 +93,57 @@ export default function CreateHouseModal({
         {/* BODY */}
         <Box flex={1} overflow="auto" px={3} py={2}>
           <Stack spacing={2}>
-            {/* Name */}
+            {/* Class Name */}
             <Box>
               <Typography fontWeight={600} fontSize={12} mb={0.5}>
-                Name
+                Class name
               </Typography>
               <TextField
                 fullWidth
                 size="small"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="House name"
+                placeholder="Class name"
+              />
+            </Box>
+
+            {/* Class Motto */}
+            <Box>
+              <Typography fontWeight={600} fontSize={12} mb={0.5}>
+                Class motto
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={motto}
+                onChange={(e) => setMotto(e.target.value)}
+                placeholder="Class motto"
+              />
+            </Box>
+
+            {/* Class Color */}
+            <Box>
+              <Typography fontWeight={600} fontSize={12} mb={0.5}>
+                Class color
+              </Typography>
+              <input
+                type="color"
+                value={classColor}
+                onChange={(e) => setClassColor(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "40px",
+                  border: "1px solid #ccc",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                }}
               />
             </Box>
 
             {/* Description */}
             <Box>
               <Typography fontWeight={600} fontSize={12} mb={0.5}>
-                Description
+                Class description
               </Typography>
               <TextField
                 fullWidth
@@ -115,14 +152,14 @@ export default function CreateHouseModal({
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description"
+                placeholder="Class description"
               />
             </Box>
 
             {/* Logo Upload */}
             <Box>
               <Typography fontWeight={600} fontSize={12} mb={0.5}>
-                Logo (optional)
+                Class logo
               </Typography>
               <Button
                 variant="outlined"

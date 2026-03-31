@@ -67,7 +67,7 @@ export default function AddPointsModal({
           }}
         >
           <Typography fontWeight={600} fontSize={16}>
-            Add item
+            Award Points
           </Typography>
 
           <IconButton size="small" onClick={onClose}>
@@ -90,7 +90,7 @@ export default function AddPointsModal({
             {/* CLASS */}
             <Box>
               <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Class
+                Select class
               </Typography>
 
               <TextField
@@ -111,7 +111,7 @@ export default function AddPointsModal({
             {/* DATE */}
             <Box>
               <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Date Awarded
+                Date
               </Typography>
 
               <TextField
@@ -127,7 +127,7 @@ export default function AddPointsModal({
             {/* POINTS */}
             <Box>
               <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Points Awarded
+                Points
               </Typography>
 
               <TextField
@@ -158,7 +158,7 @@ export default function AddPointsModal({
             </Box>
 
             {/* TOGGLE */}
-            <Box
+            {/* <Box
               display="flex"
               justifyContent="space-between"
               alignItems="center"
@@ -173,7 +173,7 @@ export default function AddPointsModal({
                 onChange={(e) => setIsEvent(e.target.checked)}
                 size="small"
               />
-            </Box>
+            </Box> */}
           </Stack>
         </Box>
 

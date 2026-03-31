@@ -12,28 +12,10 @@ import {
   Collapse,
 } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
+
 import PointsList from "../components/PointsList";
 import SkeletonList from "../components/SkeletonList";
-
-interface TeacherViewProps {
-  logs: any[];
-  totalPages: number;
-  totalItems: number;
-  pageSize: number;
-  setPageSize: (size: number) => void;
-  loadLogs: (
-    houseId?: any,
-    page?: number,
-    limit?: number,
-    search?: string,
-    teacher?: string,
-    minPoints?: number,
-    maxPoints?: number,
-  ) => Promise<void>;
-  loading: boolean;
-  onAddPoints: () => void;
-  houses: any[];
-}
+import type { TeacherViewProps } from "../types";
 
 export default function TeacherView({
   logs,
@@ -45,6 +27,8 @@ export default function TeacherView({
   loading,
   onAddPoints,
   houses,
+  role,
+  user,
 }: TeacherViewProps) {
   const [page, setPage] = useState(1);
   const [filtersVisible, setFiltersVisible] = useState(false);
@@ -55,22 +39,20 @@ export default function TeacherView({
     minPoints: "",
     maxPoints: "",
   });
-
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
   const activeRequest = useRef<string | null>(null);
   const isFirstRender = useRef(true);
 
-  // ---------------- Debounce filters (400ms) ----------------
   useEffect(() => {
     const t = setTimeout(() => setDebouncedFilters(filters), 400);
     return () => clearTimeout(t);
   }, [filters]);
 
-  // ---------------- Load logs when filters, page, or pageSize change ----------------
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      return; // skip initial render
+      return;
     }
 
     const key = `${debouncedFilters.house || "all"}-${page}-${pageSize}-${debouncedFilters.search}-${debouncedFilters.teacher}-${debouncedFilters.minPoints}-${debouncedFilters.maxPoints}`;
@@ -78,7 +60,7 @@ export default function TeacherView({
     activeRequest.current = key;
 
     loadLogs(
-      debouncedFilters.house || undefined,
+      debouncedFilters.house ? Number(debouncedFilters.house) : undefined,
       page,
       pageSize,
       debouncedFilters.search,
@@ -103,14 +85,13 @@ export default function TeacherView({
     loadLogs,
   ]);
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    setPage(1); // reset to first page on filter change
+    setPage(1);
   };
 
   return (
     <Box>
-      {/* ---------- HEADER: Title + Filter + Add Button ---------- */}
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -120,24 +101,21 @@ export default function TeacherView({
         <Typography variant="h5" fontWeight={700}>
           Points Log
         </Typography>
-
         <Stack direction="row" spacing={1}>
-          {/* Toggle filters */}
           <Button
             variant="outlined"
             onClick={() => setFiltersVisible((prev) => !prev)}
           >
             {filtersVisible ? "Close Filters" : "Filters"}
           </Button>
-
-          {/* Add points */}
-          <Button variant="contained" onClick={onAddPoints}>
-            + Add
-          </Button>
+          {role === "teacher" && (
+            <Button variant="contained" onClick={onAddPoints}>
+              + Add
+            </Button>
+          )}
         </Stack>
       </Stack>
 
-      {/* ---------- FILTER PANEL ---------- */}
       <Collapse in={filtersVisible}>
         <Paper sx={{ p: 2, mb: 2, borderRadius: 3 }}>
           <Stack
@@ -146,12 +124,6 @@ export default function TeacherView({
             flexWrap="wrap"
             alignItems="center"
           >
-            {/* <TextField
-              size="small"
-              placeholder="Search description..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.target.value)}
-            /> */}
             <TextField
               size="small"
               placeholder="Teacher name..."
@@ -187,8 +159,6 @@ export default function TeacherView({
               value={filters.maxPoints}
               onChange={(e) => handleFilterChange("maxPoints", e.target.value)}
             />
-
-            {/* ---------- RESET FILTERS BUTTON ---------- */}
             <Button
               variant="outlined"
               disabled={
@@ -215,11 +185,8 @@ export default function TeacherView({
         </Paper>
       </Collapse>
 
-      {/* ---------- LOGS LIST ---------- */}
       <Paper sx={{ p: 1, borderRadius: 3 }}>
         {loading ? <SkeletonList /> : <PointsList logs={logs} />}
-
-        {/* ---------- PAGINATION ---------- */}
         <Stack direction="row" justifyContent="space-between" mt={3}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Typography>{totalItems} items</Typography>
@@ -236,7 +203,6 @@ export default function TeacherView({
               <MenuItem value={50}>50 / page</MenuItem>
             </Select>
           </Stack>
-
           <Pagination
             count={totalPages}
             page={page}

@@ -61,6 +61,9 @@ class House(TimestampMixin, Base):
     total_points = Column(Integer, default=0)
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
 
+    motto = Column(String, nullable=True)
+    class_color = Column(String, nullable=True)  # Hex color string, e.g. "#ff0000"
+
     logs = relationship("PointsLog", back_populates="house")
     # students = relationship("Student", back_populates="house")
     school = relationship("School", back_populates="houses")

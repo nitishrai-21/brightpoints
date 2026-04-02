@@ -78,13 +78,13 @@ export default function AddPointsModal({
         {/* BODY */}
         <Box flex={1} overflow="auto" px={3} py={2}>
           {/* SECTION */}
-          <Typography fontWeight={600} fontSize={10} mb={1}>
+          {/* <Typography fontWeight={600} fontSize={10} mb={1}>
             Awarded by
           </Typography>
 
           <Typography fontSize={10} color="#6b7280" mb={2}>
             Teacher: Sanne van Luik
-          </Typography>
+          </Typography> */}
 
           <Stack spacing={2}>
             {/* CLASS */}

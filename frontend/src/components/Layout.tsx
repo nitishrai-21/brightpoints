@@ -17,8 +17,13 @@ import { useState } from "react";
 interface LayoutProps {
   user: { name: string; email: string };
   onLogout: () => void;
-  navButtons: { label: string; active: boolean; onClick: () => void }[];
-  onNavigate?: (view: "summary" | "teacher" | "student" | "profile") => void; // ✅ new
+  navButtons: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+    icon?: React.ReactNode;
+  }[];
+  onNavigate?: (view: "dashboard" | "teacher" | "student" | "profile") => void;
   children: ReactNode;
 }
 
@@ -54,11 +59,24 @@ export default function Layout({
               borderRadius: "12px",
             }}
           >
-            {navButtons.map((btn, i) => (
+            {navButtons.map((btn, idx) => (
               <Button
-                key={i}
+                key={idx}
+                startIcon={btn.icon} // icon on the left
                 variant={btn.active ? "contained" : "text"}
                 onClick={btn.onClick}
+                sx={{
+                  textTransform: "none",
+                  mr: 1,
+                  color: btn.active ? "#fff" : "#000", // text color
+                  bgcolor: btn.active ? "primary.main" : "transparent", // background when active
+                  "&:hover": {
+                    bgcolor: btn.active ? "primary.dark" : "rgba(0,0,0,0.04)", // hover effect
+                  },
+                  "& .MuiButton-startIcon": {
+                    color: btn.active ? "#fff" : "#000", // icon color matches text
+                  },
+                }}
               >
                 {btn.label}
               </Button>

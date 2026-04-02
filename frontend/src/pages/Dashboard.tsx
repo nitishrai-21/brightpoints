@@ -8,7 +8,9 @@ import {
   Navigate,
 } from "react-router-dom";
 import { CircularProgress } from "@mui/material";
-
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import SchoolIcon from "@mui/icons-material/School";
 import { api } from "../api/client";
 import TeacherView from "./TeacherView";
 import StudentView from "./StudentView";
@@ -25,6 +27,14 @@ export default function Dashboard({
 }: DashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // ---------- REFRESH AFTER NAVIGATION ----------
+  useEffect(() => {
+    if (location.state?.refresh) {
+      loadHouses();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   const [role, setRole] = useState<Role | null>(null);
   const [user, setUser] = useState<User>({
@@ -119,18 +129,21 @@ export default function Dashboard({
   // ---------------- NAV BUTTONS ----------------
   const navButtons = [
     {
-      label: "📊 Summary",
+      label: "Dashboard",
+      icon: <DashboardIcon />,
       active: location.pathname === "/dashboard",
       onClick: () => navigate("/dashboard"),
     },
     role === "teacher"
       ? {
-          label: "📋 Points Log",
+          label: "Points Log",
+          icon: <ListAltIcon />,
           active: location.pathname === "/dashboard/teacher",
           onClick: () => navigate("/dashboard/teacher"),
         }
       : {
-          label: "🎓 My Points",
+          label: "My Points",
+          icon: <SchoolIcon />,
           active: location.pathname === "/dashboard/student",
           onClick: () => navigate("/dashboard/student"),
         },
@@ -139,7 +152,10 @@ export default function Dashboard({
   return (
     <Layout user={user} onLogout={handleLogout} navButtons={navButtons}>
       <Routes>
-        <Route path="/" element={<SummaryView houses={houses} />} />
+        <Route
+          path="/"
+          element={<SummaryView houses={houses} onHouseCreated={loadHouses} />}
+        />
         <Route
           path="house/:id"
           element={

@@ -7,10 +7,11 @@ import {
   Avatar,
   Stack,
 } from "@mui/material";
-import type { House } from "../types";
+import type { House, Role } from "../types";
 
 interface StudentViewProps {
   houses: House[];
+  role?: Role;
 }
 
 export default function StudentView({ houses }: StudentViewProps) {

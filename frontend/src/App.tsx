@@ -6,6 +6,7 @@ import LoginSuccess from "./pages/LoginSuccess";
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme";
 import { api } from "./api/client";
+import ErrorPage from "./components/ErrorPage";
 
 export default function App() {
   const [accessToken, setAccessToken] = useState<string | null>(
@@ -15,28 +16,34 @@ export default function App() {
     localStorage.getItem("refresh_token"),
   );
 
+  const logout = () => {
+    setAccessToken(null);
+    setRefreshToken(null);
+    delete api.defaults.headers.common["Authorization"];
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+  };
+
   useEffect(() => {
     const interval = setInterval(
       async () => {
-        if (refreshToken) {
-          try {
-            const res = await api.post("/auth/refresh", {
-              refresh_token: refreshToken,
-            });
-            setAccessToken(res.data.access_token);
-            setRefreshToken(res.data.refresh_token);
-            localStorage.setItem("access_token", res.data.access_token);
-            localStorage.setItem("refresh_token", res.data.refresh_token);
-          } catch (err) {
-            setAccessToken(null);
-            setRefreshToken(null);
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
-          }
+        if (!refreshToken) return logout();
+
+        try {
+          const res = await api.post("/auth/refresh", {
+            refresh_token: refreshToken,
+          });
+          setAccessToken(res.data.access_token);
+          setRefreshToken(res.data.refresh_token);
+          localStorage.setItem("access_token", res.data.access_token);
+          localStorage.setItem("refresh_token", res.data.refresh_token);
+        } catch (err) {
+          logout();
         }
       },
       4 * 60 * 1000,
     );
+
     return () => clearInterval(interval);
   }, [refreshToken]);
 
@@ -87,6 +94,10 @@ export default function App() {
                 <Navigate to="/" />
               )
             }
+          />
+          <Route
+            path="*"
+            element={<ErrorPage code={404} message="Page not found" />}
           />
         </Routes>
       </BrowserRouter>

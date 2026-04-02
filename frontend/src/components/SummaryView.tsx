@@ -10,8 +10,7 @@ import {
   IconButton,
   Button,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import { getImageUrl } from "../api/client";
 import CreateHouseModal from "./CreateHouseModal";
 import { useNavigate } from "react-router-dom";
 import type { House } from "../types";
@@ -31,7 +30,6 @@ export default function SummaryView({
     0,
   );
 
-  const backendBase = "http://localhost:8000/static/icons/";
   const navigate = useNavigate();
 
   const getMedalNumber = (i: number) => i + 1;
@@ -66,11 +64,7 @@ export default function SummaryView({
         {sorted.map((house, i) => {
           const points = Math.max(0, house.total_points);
           const percentage = totalPoints > 0 ? (points / totalPoints) * 100 : 0;
-          const logoSrc = (house as any).logo_url
-            ? (house as any).logo_url.startsWith("http")
-              ? (house as any).logo_url
-              : `${backendBase}${(house as any).logo_url}`
-            : `/images/default-house.png`;
+          const logoSrc = getImageUrl(house.logo_url) || undefined;
 
           return (
             <Box key={house.id} sx={{ mb: 2 }}>

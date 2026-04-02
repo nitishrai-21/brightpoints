@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import PointsList from "../components/PointsList";
 import SkeletonList from "../components/SkeletonList";
 import type { TeacherViewProps } from "../types";
+import ErrorPage from "../components/ErrorPage";
 
 export default function TeacherView({
   logs,
@@ -24,12 +25,22 @@ export default function TeacherView({
   pageSize,
   setPageSize,
   loadLogs,
-  loading,
   onAddPoints,
   houses,
   role,
   user,
 }: TeacherViewProps) {
+  // ---------------- Role check ----------------
+  if (role !== "teacher") {
+    return (
+      <ErrorPage
+        code={403}
+        message="Access denied. Only teachers can view this page."
+      />
+    );
+  }
+
+  // ---------------- Local state ----------------
   const [page, setPage] = useState(1);
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [filters, setFilters] = useState({
@@ -40,16 +51,46 @@ export default function TeacherView({
     maxPoints: "",
   });
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const [localLoading, setLocalLoading] = useState(false); // local loading state
 
   const activeRequest = useRef<string | null>(null);
   const isFirstRender = useRef(true);
 
+  // ---------------- Debounce filters ----------------
   useEffect(() => {
     const t = setTimeout(() => setDebouncedFilters(filters), 400);
     return () => clearTimeout(t);
   }, [filters]);
 
+  // ---------------- Fetch logs ----------------
+  const fetchLogs = async (
+    houseId?: number,
+    pageNumber = 1,
+    limit = pageSize,
+    search = "",
+    teacherName = "",
+    minPoints?: number,
+    maxPoints?: number,
+  ) => {
+    setLocalLoading(true);
+    try {
+      await loadLogs(
+        houseId,
+        pageNumber,
+        limit,
+        search,
+        teacherName,
+        minPoints,
+        maxPoints,
+      );
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  // ---------------- Load logs on filter/page change ----------------
   useEffect(() => {
+    // skip first render
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -59,7 +100,7 @@ export default function TeacherView({
     if (activeRequest.current === key) return;
     activeRequest.current = key;
 
-    loadLogs(
+    fetchLogs(
       debouncedFilters.house ? Number(debouncedFilters.house) : undefined,
       page,
       pageSize,
@@ -82,16 +123,18 @@ export default function TeacherView({
     debouncedFilters.teacher,
     debouncedFilters.minPoints,
     debouncedFilters.maxPoints,
-    loadLogs,
-  ]);
+  ]); // note: removed loadLogs and loading from deps
 
+  // ---------------- Handle filter input changes ----------------
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);
   };
 
+  // ---------------- Render ----------------
   return (
     <Box>
+      {/* Header and Add Button */}
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -108,14 +151,13 @@ export default function TeacherView({
           >
             {filtersVisible ? "Close Filters" : "Filters"}
           </Button>
-          {role === "teacher" && (
-            <Button variant="contained" onClick={onAddPoints}>
-              + Add
-            </Button>
-          )}
+          <Button variant="contained" onClick={onAddPoints}>
+            + Add
+          </Button>
         </Stack>
       </Stack>
 
+      {/* Filters */}
       <Collapse in={filtersVisible}>
         <Paper sx={{ p: 2, mb: 2, borderRadius: 3 }}>
           <Stack
@@ -185,8 +227,9 @@ export default function TeacherView({
         </Paper>
       </Collapse>
 
+      {/* Logs List */}
       <Paper sx={{ p: 1, borderRadius: 3 }}>
-        {loading ? <SkeletonList /> : <PointsList logs={logs} />}
+        {localLoading ? <SkeletonList /> : <PointsList logs={logs} />}
         <Stack direction="row" justifyContent="space-between" mt={3}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Typography>{totalItems} items</Typography>

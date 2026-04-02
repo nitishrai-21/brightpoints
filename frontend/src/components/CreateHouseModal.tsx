@@ -1,5 +1,5 @@
 // src/components/CreateHouseModal.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   Box,
@@ -11,18 +11,21 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import { api } from "../api/client";
+import { api, getImageUrl } from "../api/client";
+import type { House } from "../types";
 
 interface CreateHouseModalProps {
   open: boolean;
   onClose: () => void;
-  onCreated?: () => void; // callback after house is created
+  onCreated?: () => void; // callback after house is created/updated
+  house?: House | null; // for edit
 }
 
 export default function CreateHouseModal({
   open,
   onClose,
   onCreated,
+  house,
 }: CreateHouseModalProps) {
   const [name, setName] = useState("");
   const [motto, setMotto] = useState("");
@@ -31,9 +34,36 @@ export default function CreateHouseModal({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
+  // field-level errors
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // ---------------- Prefill (Edit Mode) ----------------
+  useEffect(() => {
+    if (house && open) {
+      setName(house.name || "");
+      setMotto(house.motto || "");
+      setDescription(house.description || "");
+      setClassColor(house.class_color || "#6366f1");
+      setPreview(getImageUrl(house.logo_url));
+      setLogoFile(null); // reset file input
+      setErrors({});
+    } else if (!house && open) {
+      // Reset for create mode
+      setName("");
+      setMotto("");
+      setDescription("");
+      setClassColor("#6366f1");
+      setLogoFile(null);
+      setPreview(null);
+      setErrors({});
+    }
+  }, [house, open]);
+
+  // ---------------- File Upload ----------------
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setLogoFile(file);
+
     if (file) {
       setPreview(URL.createObjectURL(file));
     } else {
@@ -41,8 +71,14 @@ export default function CreateHouseModal({
     }
   };
 
+  // ---------------- Submit ----------------
   const submit = async () => {
-    if (!name.trim()) return;
+    setErrors({}); // reset errors
+
+    if (!name.trim()) {
+      setErrors({ name: "Class name is required" });
+      return;
+    }
 
     const formData = new FormData();
     formData.append("name", name);
@@ -51,12 +87,42 @@ export default function CreateHouseModal({
     formData.append("color", classColor);
     if (logoFile) formData.append("logo", logoFile);
 
-    await api.post("/houses", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    try {
+      if (house) {
+        await api.put(`/houses/${house.id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await api.post("/houses", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
 
-    if (onCreated) await onCreated();
-    onClose();
+      if (onCreated) await onCreated();
+      onClose();
+    } catch (err: any) {
+      // handle backend validation errors
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+
+        // If detail is string, show as general error
+        if (typeof detail === "string") {
+          setErrors({ general: detail });
+        } else if (Array.isArray(detail)) {
+          // FastAPI returns array of errors for Pydantic validation
+          const fieldErrors: { [key: string]: string } = {};
+          detail.forEach((d: any) => {
+            const field = d.loc?.[1] || "general";
+            fieldErrors[field] = d.msg;
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ general: "Validation error occurred" });
+        }
+      } else {
+        setErrors({ general: "Failed to save class. Please try again." });
+      }
+    }
   };
 
   return (
@@ -83,8 +149,9 @@ export default function CreateHouseModal({
           }}
         >
           <Typography fontWeight={600} fontSize={16}>
-            Add Class
+            {house ? "Edit Class" : "Add Class"}
           </Typography>
+
           <IconButton size="small" onClick={onClose}>
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -93,6 +160,13 @@ export default function CreateHouseModal({
         {/* BODY */}
         <Box flex={1} overflow="auto" px={3} py={2}>
           <Stack spacing={2}>
+            {/* general error */}
+            {errors.general && (
+              <Typography color="error" fontSize={12}>
+                {errors.general}
+              </Typography>
+            )}
+
             {/* Class Name */}
             <Box>
               <Typography fontWeight={600} fontSize={12} mb={0.5}>
@@ -104,6 +178,8 @@ export default function CreateHouseModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Class name"
+                error={!!errors.name}
+                helperText={errors.name}
               />
             </Box>
 
@@ -118,6 +194,8 @@ export default function CreateHouseModal({
                 value={motto}
                 onChange={(e) => setMotto(e.target.value)}
                 placeholder="Class motto"
+                error={!!errors.motto}
+                helperText={errors.motto}
               />
             </Box>
 
@@ -153,6 +231,8 @@ export default function CreateHouseModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Class description"
+                error={!!errors.description}
+                helperText={errors.description}
               />
             </Box>
 
@@ -199,6 +279,11 @@ export default function CreateHouseModal({
                   />
                 </Box>
               )}
+              {errors.logo && (
+                <Typography color="error" fontSize={12} mt={0.5}>
+                  {errors.logo}
+                </Typography>
+              )}
             </Box>
           </Stack>
         </Box>
@@ -214,8 +299,9 @@ export default function CreateHouseModal({
           }}
         >
           <Button variant="contained" fullWidth onClick={submit}>
-            Create
+            {house ? "Update" : "Create"}
           </Button>
+
           <Button fullWidth onClick={onClose}>
             Cancel
           </Button>

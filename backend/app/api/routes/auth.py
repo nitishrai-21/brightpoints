@@ -45,7 +45,7 @@ def sso_redirect(school_id: int, db: Session = Depends(get_db)):
             f"&redirect_uri={redirect_uri}"
             f"&state={school.id}"
         )
-        print("DEBUG: Full Google OAuth URL:", google_auth_url)
+        print("DEBUG: Full Google OAuth URL..........................:", google_auth_url)
         return RedirectResponse(google_auth_url)
     else:
         ad_login_url = f"https://{school.domain}/ad-login?redirect={redirect_uri}&state={school.id}"
@@ -53,8 +53,9 @@ def sso_redirect(school_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------- SSO Callback ----------------
-@router.get("/callback")
+@router.get("/callback", include_in_schema=True)
 def sso_callback(code: str = None, state: int = None, db: Session = Depends(get_db)):
+    print("DEBUG: Callback route hit")
     school = db.query(School).filter(School.id == state).first()
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
@@ -82,7 +83,7 @@ def sso_callback(code: str = None, state: int = None, db: Session = Depends(get_
 
     name = generate_display_name(email)
 
-    # ✅ Tenant-safe: always associate user with their school
+    # Tenant-safe: always associate user with their school
     user = db.query(User).filter(User.email == email, User.school_id == school.id).first()
     if not user:
         user = User(email=email, name=name, school_id=school.id, role="student")

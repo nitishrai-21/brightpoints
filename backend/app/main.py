@@ -16,9 +16,9 @@ app = FastAPI(title="BrightPoints")
 # ----------------- Debug Middleware -----------------
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    print(f"DEBUG: Incoming request: {request.method} {request.url}")
+    print(f"DEBUG: {request.method} {request.url} (scheme={request.url.scheme}, host={request.url.hostname}, path={request.url.path})")
     response = await call_next(request)
-    print(f"DEBUG: Response status: {response.status_code} for {request.url}")
+    print(f"DEBUG: Response status: {response.status_code}")
     return response
 
 # ----------------- Debug DB Connection -----------------

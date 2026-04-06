@@ -45,6 +45,7 @@ def sso_redirect(school_id: int, db: Session = Depends(get_db)):
             f"&redirect_uri={redirect_uri}"
             f"&state={school.id}"
         )
+        print("DEBUG: Full Google OAuth URL:", google_auth_url)
         return RedirectResponse(google_auth_url)
     else:
         ad_login_url = f"https://{school.domain}/ad-login?redirect={redirect_uri}&state={school.id}"

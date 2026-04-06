@@ -17,12 +17,16 @@ app = FastAPI(title="BrightPoints")
 @app.on_event("startup")
 async def startup_event():
     try:
-        with engine.connect() as conn:
-            result = conn.execute(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema='public';"
-            )
-            tables = [row[0] for row in result]
-            print("Tables in DB:", tables)
+        # with engine.connect() as conn:
+        #     result = conn.execute(
+        #         "SELECT table_name FROM information_schema.tables WHERE table_schema='public';"
+        #     )
+        #     tables = [row[0] for row in result]
+        #     print("Tables in DB:", tables)
+
+            # --- Google OAuth Debug ---
+        redirect_uri = f"{settings.BACKEND_URL}/auth/callback"
+        print("Effective Google OAuth redirect_uri:", redirect_uri)
     except Exception as e:
         print("DB Connection Error:", e)
 

@@ -26,7 +26,8 @@ async def startup_event():
 
             # --- Google OAuth Debug ---
         redirect_uri = f"{settings.BACKEND_URL}/auth/callback"
-        print("Effective Google OAuth redirect_uri:", redirect_uri)
+        print("DEBUG: Redirect from env:", redirect_uri)
+        print("DEBUG: PORT env var (Render):", os.getenv("PORT"))
     except Exception as e:
         print("DB Connection Error:", e)
 

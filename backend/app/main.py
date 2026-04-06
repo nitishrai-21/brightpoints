@@ -5,7 +5,7 @@ from app.api.routes import houses, points, auth, schools
 from fastapi.staticfiles import StaticFiles
 
 # Create DB tables
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BrightPoints")
 

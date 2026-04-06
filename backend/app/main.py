@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.core.database import Base, engine
 from app.api.routes import houses, points, auth, schools
 from fastapi.staticfiles import StaticFiles
@@ -50,6 +51,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ----------------- NEW: Trust Render Reverse Proxy -----------------
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Routers
 app.include_router(auth.router)

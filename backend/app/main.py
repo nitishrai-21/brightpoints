@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import Base, engine
 from app.api.routes import houses, points, auth, schools
@@ -12,6 +12,14 @@ print("Using DATABASE_URL:", settings.DATABASE_URL)
 # Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BrightPoints")
+
+# ----------------- Debug Middleware -----------------
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"DEBUG: Incoming request: {request.method} {request.url}")
+    response = await call_next(request)
+    print(f"DEBUG: Response status: {response.status_code} for {request.url}")
+    return response
 
 # ----------------- Debug DB Connection -----------------
 @app.on_event("startup")

@@ -28,7 +28,8 @@ export default function Login({
 
   const handleSSOLogin = () => {
     if (!schoolId) return alert("Select a school first");
-    window.location.href = `http://localhost:8000/auth/sso/${schoolId}`;
+    const baseURL = api.defaults.baseURL?.replace(/\/$/, ""); // remove trailing slash
+    window.location.href = `${baseURL}/auth/sso/${schoolId}`;
   };
 
   return (

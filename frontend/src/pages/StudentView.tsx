@@ -8,6 +8,7 @@ import {
   Stack,
 } from "@mui/material";
 import type { House, Role } from "../types";
+import { getImageUrl } from "../api/client";
 
 interface StudentViewProps {
   houses: House[];
@@ -20,7 +21,6 @@ export default function StudentView({ houses }: StudentViewProps) {
     (sum, h) => sum + Math.max(0, h.total_points),
     0,
   );
-  const backendBase = "http://localhost:8000/static/icons/";
 
   return (
     <Paper sx={{ p: 3, borderRadius: 3 }}>
@@ -31,11 +31,7 @@ export default function StudentView({ houses }: StudentViewProps) {
       {sorted.map((house) => {
         const points = Math.max(0, house.total_points);
         const percentage = totalPoints > 0 ? (points / totalPoints) * 100 : 0;
-        const logoSrc = house.logo_url
-          ? house.logo_url.startsWith("http")
-            ? house.logo_url
-            : `${backendBase}${house.logo_url}`
-          : `/images/default-house.png`;
+        const logoSrc = getImageUrl(house.logo_url) || undefined;
 
         return (
           <Box key={house.id} sx={{ mb: 2 }}>

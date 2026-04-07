@@ -51,10 +51,9 @@ export default function TeacherView({
     maxPoints: "",
   });
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
-  const [localLoading, setLocalLoading] = useState(false); // local loading state
+  const [localLoading, setLocalLoading] = useState(false);
 
   const activeRequest = useRef<string | null>(null);
-  const isFirstRender = useRef(true);
 
   // ---------------- Debounce filters ----------------
   useEffect(() => {
@@ -88,15 +87,11 @@ export default function TeacherView({
     }
   };
 
-  // ---------------- Load logs on filter/page change ----------------
+  //single effect handles initial load + updates
   useEffect(() => {
-    // skip first render
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
     const key = `${debouncedFilters.house || "all"}-${page}-${pageSize}-${debouncedFilters.search}-${debouncedFilters.teacher}-${debouncedFilters.minPoints}-${debouncedFilters.maxPoints}`;
+
+    // prevent duplicate identical requests
     if (activeRequest.current === key) return;
     activeRequest.current = key;
 
@@ -123,7 +118,7 @@ export default function TeacherView({
     debouncedFilters.teacher,
     debouncedFilters.minPoints,
     debouncedFilters.maxPoints,
-  ]); // note: removed loadLogs and loading from deps
+  ]);
 
   // ---------------- Handle filter input changes ----------------
   const handleFilterChange = (key: string, value: string) => {

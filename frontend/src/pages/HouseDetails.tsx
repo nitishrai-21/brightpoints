@@ -53,12 +53,11 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
 
     try {
       const res = await api.get(`/houses/${id}`);
-      setHouse(res.data); // API returns a House
-      setError(null); // clear previous errors if any
+      setHouse(res.data);
+      setError(null);
     } catch (err: any) {
       console.error("Failed to load house", err);
 
-      // Customize error based on response
       if (err.response?.status === 404) {
         setError({ code: 404, message: "House not found" });
       } else {
@@ -81,11 +80,12 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
       minPoints?: number,
       maxPoints?: number,
     ) => {
-      if (!id) return;
+      if (!houseId) return; // use houseId instead of id
 
       setLoading(true);
       try {
-        let url = `/points?page=${page}&limit=${limit}&houseId=${id}`;
+        // use houseId instead of id
+        let url = `/points?page=${page}&limit=${limit}&houseId=${houseId}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
         if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
         if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
@@ -102,8 +102,15 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         setLoading(false);
       }
     },
-    [id, pageSize],
+    [pageSize],
   );
+
+  // LOAD LOGS ON INITIAL MOUNT
+  useEffect(() => {
+    if (id) {
+      loadLogs(Number(id));
+    }
+  }, [id, loadLogs]);
 
   // ---------------- Delete house ----------------
   const handleDelete = async () => {
@@ -129,7 +136,6 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         code={error.code}
         message={error.message}
         redirectTo="/dashboard"
-        // redirectLabel="Go back to houses"
       />
     );
   }
@@ -156,7 +162,6 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
       >
         {role === "teacher" && (
           <>
-            {/* Edit Button */}
             <Tooltip title="Edit class">
               <IconButton
                 onClick={() => setEditModalOpen(true)}
@@ -173,7 +178,6 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
               </IconButton>
             </Tooltip>
 
-            {/* Delete Button */}
             <Tooltip title="Delete class">
               <IconButton
                 onClick={handleDelete}
@@ -223,7 +227,7 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         setPageSize={setPageSize}
         loadLogs={loadLogs}
         loading={loading}
-        houses={[house]} // for dropdown in filters
+        houses={[house]}
         onAddPoints={onAddPoints}
         role={role}
       />
@@ -233,8 +237,8 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         <CreateHouseModal
           open={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          onCreated={loadHouse} // refresh after edit
-          house={house} // prefill values
+          onCreated={loadHouse}
+          house={house}
         />
       )}
     </Box>

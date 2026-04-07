@@ -37,7 +37,15 @@ export default function AddPointsModal({
       awarded_at_event: isEvent,
     });
 
-    onSuccess();
+    onSuccess?.();
+
+    // Reset form fields
+    setPoints("");
+    setReason("");
+    setSelectedHouse(houseId || ""); // optional fallback
+    setDate("");
+    setIsEvent(false);
+
     onClose();
   };
 

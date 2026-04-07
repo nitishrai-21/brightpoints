@@ -200,7 +200,7 @@ export default function Dashboard({
         <AddPointsDrawer
           open={showAddPoints}
           onClose={() => setShowAddPoints(false)}
-          refreshLogs={() => loadAllLogs()}
+          onSuccess={() => loadAllLogs()}
           houses={houses}
         />
       )}

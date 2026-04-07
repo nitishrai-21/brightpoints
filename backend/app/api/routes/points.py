@@ -31,6 +31,7 @@ def add_points(data: PointsCreate, current_user: User = Depends(get_current_user
         points=data.points,
         reason=data.reason,
         class_group=data.class_group,
+        awarded_at=data.date_awarded,
     )
 
 

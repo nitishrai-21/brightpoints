@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 class PointsCreate(BaseModel):
@@ -7,6 +7,7 @@ class PointsCreate(BaseModel):
     points: int
     reason: str
     class_group: Optional[str] = None
+    date_awarded: Optional[date] = None
 
 class PointsLogResponse(BaseModel):
     id: int

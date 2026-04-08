@@ -10,20 +10,28 @@ import {
   MenuItem,
   Divider,
   Container,
+  BottomNavigation,
+  BottomNavigationAction,
+  Paper,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
+
+interface NavButton {
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+  icon?: React.ReactNode;
+  path?: string; // added for route-aware mobile nav
+}
 
 interface LayoutProps {
   user: { name: string; email: string };
   onLogout: () => void;
-  navButtons: {
-    label: string;
-    active: boolean;
-    onClick: () => void;
-    icon?: React.ReactNode;
-  }[];
-  onNavigate?: (view: "dashboard" | "teacher" | "student" | "profile") => void;
+  navButtons: NavButton[];
   children: ReactNode;
 }
 
@@ -31,100 +39,163 @@ export default function Layout({
   user,
   onLogout,
   navButtons,
-  onNavigate,
   children,
 }: LayoutProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const location = useLocation();
+
+  // Determine active index for mobile BottomNavigation
+  const activeIndex = navButtons.findIndex((btn) => {
+    if (btn.path) {
+      // exact match with current pathname
+      return btn.path === location.pathname;
+    }
+    return btn.active;
+  });
 
   return (
     <>
+      {/* ================= APP BAR ================= */}
       <AppBar
-        position="static"
+        position="sticky"
         elevation={0}
-        sx={{ bgcolor: "white", borderBottom: "1px solid #e5e7eb", height: 64 }}
+        sx={{
+          bgcolor: "white",
+          borderBottom: "1px solid #e5e7eb",
+        }}
       >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Typography fontWeight={600} color="black">
+        <Toolbar
+          sx={{
+            justifyContent: "space-between",
+            minHeight: { xs: 56, sm: 64 },
+            px: { xs: 1.5, sm: 2 },
+          }}
+        >
+          {/* LOGO */}
+          <Typography fontWeight={700} color="black">
             BrightPoints
           </Typography>
 
-          {/* NAVIGATION */}
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              bgcolor: "#f3f4f6",
-              p: "6px",
-              borderRadius: "12px",
-            }}
-          >
-            {navButtons.map((btn, idx) => (
-              <Button
-                key={idx}
-                startIcon={btn.icon} // icon on the left
-                variant={btn.active ? "contained" : "text"}
-                onClick={btn.onClick}
-                sx={{
-                  textTransform: "none",
-                  mr: 1,
-                  color: btn.active ? "#fff" : "#000", // text color
-                  bgcolor: btn.active ? "primary.main" : "transparent", // background when active
-                  "&:hover": {
-                    bgcolor: btn.active ? "primary.dark" : "rgba(0,0,0,0.04)", // hover effect
-                  },
-                  "& .MuiButton-startIcon": {
-                    color: btn.active ? "#fff" : "#000", // icon color matches text
-                  },
-                }}
-              >
-                {btn.label}
-              </Button>
-            ))}
-          </Box>
+          {/* DESKTOP NAV */}
+          {!isMobile && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                bgcolor: "#f3f4f6",
+                p: "6px",
+                borderRadius: "12px",
+              }}
+            >
+              {navButtons.map((btn, idx) => (
+                <Button
+                  key={idx}
+                  startIcon={btn.icon}
+                  variant={btn.active ? "contained" : "text"}
+                  onClick={btn.onClick}
+                  sx={{
+                    textTransform: "none",
+                    color: btn.active ? "#fff" : "#000",
+                    bgcolor: btn.active ? "primary.main" : "transparent",
+                    "&:hover": {
+                      bgcolor: btn.active ? "primary.dark" : "rgba(0,0,0,0.04)",
+                    },
+                  }}
+                >
+                  {btn.label}
+                </Button>
+              ))}
+            </Box>
+          )}
 
           {/* AVATAR */}
-          <Box>
-            <Avatar
-              sx={{ bgcolor: "#1976d2", cursor: "pointer" }}
-              onClick={(event) => setAnchorEl(event.currentTarget)}
+          <Avatar
+            sx={{ bgcolor: "#1976d2", cursor: "pointer" }}
+            onClick={(e) => setAnchorEl(e.currentTarget)}
+          >
+            {user.name ? user.name[0] : "U"}
+          </Avatar>
+
+          {/* MENU */}
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+          >
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography fontWeight={600}>{user.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {user.email.split("@")[0]}@***
+              </Typography>
+            </Box>
+
+            <Divider />
+
+            <MenuItem
+              onClick={() => {
+                window.location.href = "/dashboard/profile";
+                setAnchorEl(null);
+              }}
             >
-              {user.name ? user.name[0] : "U"}
-            </Avatar>
+              Profile
+            </MenuItem>
 
-            <Menu
-              anchorEl={anchorEl}
-              open={open}
-              onClose={() => setAnchorEl(null)}
-            >
-              <Box sx={{ px: 2, py: 1.5 }}>
-                <Typography fontWeight={600}>{user.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {user.email.split("@")[0]}@***
-                </Typography>
-              </Box>
-
-              <Divider />
-              {/* ✅ Profile menu */}
-              <MenuItem
-                onClick={() => {
-                  onNavigate?.("profile"); // Switch to profile view
-                  setAnchorEl(null);
-                }}
-              >
-                Profile
-              </MenuItem>
-
-              <MenuItem onClick={onLogout}>Logout</MenuItem>
-            </Menu>
-          </Box>
+            <MenuItem onClick={onLogout}>Logout</MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
-      {/* CONTENT */}
-      <Container maxWidth="lg" sx={{ mt: 3 }}>
-        <Box sx={{ bgcolor: "white", p: 3, borderRadius: 2 }}>{children}</Box>
+      {/* ================= CONTENT ================= */}
+      <Container
+        maxWidth="lg"
+        sx={{
+          mt: { xs: 2, md: 3 },
+          mb: { xs: 8, md: 3 }, // space for bottom nav
+          px: { xs: 1.5, sm: 2 },
+        }}
+      >
+        <Box
+          sx={{
+            bgcolor: "white",
+            p: { xs: 2, md: 3 },
+            borderRadius: 2,
+          }}
+        >
+          {children}
+        </Box>
       </Container>
+
+      {/* ================= MOBILE BOTTOM NAV ================= */}
+      {isMobile && (
+        <Paper
+          elevation={8}
+          sx={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderTop: "1px solid #e5e7eb",
+          }}
+        >
+          <BottomNavigation
+            showLabels
+            value={activeIndex >= 0 ? activeIndex : null}
+          >
+            {navButtons.map((btn, idx) => (
+              <BottomNavigationAction
+                key={idx}
+                label={btn.label}
+                icon={btn.icon}
+                value={idx}
+                onClick={btn.onClick}
+              />
+            ))}
+          </BottomNavigation>
+        </Paper>
+      )}
     </>
   );
 }

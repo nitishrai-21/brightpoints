@@ -8,6 +8,8 @@ import {
   Button,
   Stack,
   IconButton,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
@@ -27,6 +29,9 @@ export default function CreateHouseModal({
   onCreated,
   house,
 }: CreateHouseModalProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [name, setName] = useState("");
   const [motto, setMotto] = useState("");
   const [description, setDescription] = useState("");
@@ -45,10 +50,9 @@ export default function CreateHouseModal({
       setDescription(house.description || "");
       setClassColor(house.class_color || "#6366f1");
       setPreview(getImageUrl(house.logo_url));
-      setLogoFile(null); // reset file input
+      setLogoFile(null);
       setErrors({});
     } else if (!house && open) {
-      // Reset for create mode
       setName("");
       setMotto("");
       setDescription("");
@@ -101,15 +105,11 @@ export default function CreateHouseModal({
       if (onCreated) await onCreated();
       onClose();
     } catch (err: any) {
-      // handle backend validation errors
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail;
-
-        // If detail is string, show as general error
         if (typeof detail === "string") {
           setErrors({ general: detail });
         } else if (Array.isArray(detail)) {
-          // FastAPI returns array of errors for Pydantic validation
           const fieldErrors: { [key: string]: string } = {};
           detail.forEach((d: any) => {
             const field = d.loc?.[1] || "general";
@@ -127,20 +127,45 @@ export default function CreateHouseModal({
 
   return (
     <Drawer
-      anchor="right"
+      anchor={isMobile ? "bottom" : "right"}
       open={open}
       onClose={onClose}
-      slotProps={{
-        paper: {
-          sx: { width: 420, borderLeft: "1px solid #e5e7eb", bgcolor: "#fff" },
-        },
+      PaperProps={{
+        sx: isMobile
+          ? {
+              width: "100%",
+              maxHeight: "90vh",
+              minHeight: "50vh",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+            }
+          : {
+              width: 420,
+              borderLeft: "1px solid #e5e7eb",
+            },
       }}
     >
       <Box display="flex" flexDirection="column" height="100%">
+        {/* DRAG HANDLE for mobile */}
+        {isMobile && (
+          <Box
+            sx={{
+              width: 40,
+              height: 4,
+              bgcolor: "#ccc",
+              borderRadius: 2,
+              mx: "auto",
+              my: 1,
+            }}
+          />
+        )}
+
         {/* HEADER */}
         <Box
           sx={{
-            px: 3,
+            px: isMobile ? 2 : 3,
             py: 2,
             borderBottom: "1px solid #e5e7eb",
             display: "flex",
@@ -151,14 +176,23 @@ export default function CreateHouseModal({
           <Typography fontWeight={600} fontSize={16}>
             {house ? "Edit Class" : "Add Class"}
           </Typography>
-
           <IconButton size="small" onClick={onClose}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
 
         {/* BODY */}
-        <Box flex={1} overflow="auto" px={3} py={2}>
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflowY: "auto",
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            pb: isMobile
+              ? "calc(16px + env(safe-area-inset-bottom) + 80px)" // ensure last input not hidden
+              : 2,
+          }}
+        >
           <Stack spacing={2}>
             {/* general error */}
             {errors.general && (
@@ -291,18 +325,21 @@ export default function CreateHouseModal({
         {/* FOOTER */}
         <Box
           sx={{
-            px: 3,
-            py: 2,
-            borderTop: "1px solid #e5e7eb",
+            px: 2,
+            pt: 2,
+            pb: "calc(env(safe-area-inset-bottom) + 16px)",
             display: "flex",
-            gap: 2,
+            gap: 1.5,
+            flexDirection: isMobile ? "column" : "row",
+            position: "sticky",
+            bottom: 0,
+            bgcolor: "white",
           }}
         >
-          <Button variant="contained" fullWidth onClick={submit}>
+          <Button variant="contained" fullWidth size="large" onClick={submit}>
             {house ? "Update" : "Create"}
           </Button>
-
-          <Button fullWidth onClick={onClose}>
+          <Button fullWidth size="large" onClick={onClose}>
             Cancel
           </Button>
         </Box>

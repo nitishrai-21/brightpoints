@@ -7,12 +7,12 @@ import {
   Button,
   Stack,
   MenuItem,
-  Switch,
-  FormControlLabel,
   IconButton,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../api/client";
 
 export default function AddPointsModal({
@@ -22,51 +22,103 @@ export default function AddPointsModal({
   houseId,
   onSuccess,
 }: any) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [points, setPoints] = useState<number | "">("");
   const [reason, setReason] = useState("");
-  const [selectedHouse, setSelectedHouse] = useState(houseId);
+  const [selectedHouse, setSelectedHouse] = useState<number | "">(
+    houseId ?? "",
+  );
   const [date, setDate] = useState("");
-  const [isEvent, setIsEvent] = useState(false);
+
+  // Function to reset form
+  const resetForm = () => {
+    setPoints("");
+    setReason("");
+    setSelectedHouse(houseId ?? "");
+    setDate("");
+  };
+
+  // Sync houseId if modal opens with a different value
+  useEffect(() => {
+    if (open) {
+      setSelectedHouse(houseId ?? "");
+    } else {
+      // Reset form when modal closes
+      resetForm();
+    }
+  }, [houseId, open]);
 
   const submit = async () => {
+    if (!selectedHouse) return; // guard against empty selection
+
     await api.post("/points", {
       house_id: selectedHouse,
       points: Number(points),
       reason,
       date_awarded: date || null,
-      awarded_at_event: isEvent,
     });
 
     onSuccess?.();
 
-    // Reset form fields
-    setPoints("");
-    setReason("");
-    setSelectedHouse(houseId || ""); // optional fallback
-    setDate("");
-    setIsEvent(false);
+    resetForm();
 
+    onClose();
+  };
+
+  const handleCancel = () => {
+    resetForm();
     onClose();
   };
 
   return (
     <Drawer
-      anchor="right"
+      anchor={isMobile ? "bottom" : "right"}
       open={open}
-      onClose={onClose}
+      onClose={handleCancel}
       PaperProps={{
-        sx: {
-          width: 420,
-          borderLeft: "1px solid #e5e7eb",
-          bgcolor: "#fff",
-        },
+        sx: isMobile
+          ? {
+              width: "100%",
+              maxHeight: "90vh",
+              minHeight: "50vh",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              display: "flex",
+              flexDirection: "column",
+            }
+          : {
+              width: 420,
+              borderLeft: "1px solid #e5e7eb",
+            },
       }}
     >
-      <Box display="flex" flexDirection="column" height="100%">
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+        }}
+      >
+        {/* DRAG HANDLE (mobile UX) */}
+        {isMobile && (
+          <Box
+            sx={{
+              width: 40,
+              height: 4,
+              bgcolor: "#ccc",
+              borderRadius: 2,
+              mx: "auto",
+              my: 1,
+            }}
+          />
+        )}
+
         {/* HEADER */}
         <Box
           sx={{
-            px: 3,
+            px: 2.5,
             py: 2,
             borderBottom: "1px solid #e5e7eb",
             display: "flex",
@@ -74,132 +126,102 @@ export default function AddPointsModal({
             justifyContent: "space-between",
           }}
         >
-          <Typography fontWeight={600} fontSize={16}>
-            Award Points
-          </Typography>
-
-          <IconButton size="small" onClick={onClose}>
-            <CloseIcon fontSize="small" />
+          <Typography fontWeight={600}>Award Points</Typography>
+          <IconButton onClick={handleCancel}>
+            <CloseIcon />
           </IconButton>
         </Box>
 
         {/* BODY */}
-        <Box flex={1} overflow="auto" px={3} py={2}>
-          {/* SECTION */}
-          {/* <Typography fontWeight={600} fontSize={10} mb={1}>
-            Awarded by
-          </Typography>
-
-          <Typography fontSize={10} color="#6b7280" mb={2}>
-            Teacher: Sanne van Luik
-          </Typography> */}
-
-          <Stack spacing={2}>
-            {/* CLASS */}
-            <Box>
-              <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Select class
-              </Typography>
-
-              <TextField
-                select
-                fullWidth
-                size="small"
-                value={selectedHouse}
-                onChange={(e) => setSelectedHouse(e.target.value)}
-              >
-                {houses.map((h: any) => (
-                  <MenuItem key={h.id} value={h.id}>
-                    {h.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Box>
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflowY: "auto",
+            px: { xs: 2, sm: 3 },
+            py: 2,
+            // Add bottom padding so content doesn't go under the sticky footer
+            pb: `calc(env(safe-area-inset-bottom) + 100px)`,
+          }}
+        >
+          <Stack spacing={2.2}>
+            {/* HOUSE */}
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Class"
+              value={selectedHouse}
+              onChange={(e) =>
+                setSelectedHouse(
+                  e.target.value === "" ? "" : Number(e.target.value),
+                )
+              }
+            >
+              <MenuItem value="">Select class</MenuItem>
+              {houses.map((h: any) => (
+                <MenuItem key={h.id} value={h.id}>
+                  {h.name}
+                </MenuItem>
+              ))}
+            </TextField>
 
             {/* DATE */}
-            <Box>
-              <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Date
-              </Typography>
-
-              <TextField
-                type="date"
-                fullWidth
-                size="small"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
+            <TextField
+              type="date"
+              fullWidth
+              size="small"
+              label="Date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
 
             {/* POINTS */}
-            <Box>
-              <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Points
-              </Typography>
-
-              <TextField
-                fullWidth
-                size="small"
-                type="number"
-                value={points}
-                onChange={(e) =>
-                  setPoints(e.target.value === "" ? "" : Number(e.target.value))
-                }
-              />
-            </Box>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label="Points"
+              value={points}
+              onChange={(e) =>
+                setPoints(e.target.value === "" ? "" : Number(e.target.value))
+              }
+            />
 
             {/* REASON */}
-            <Box>
-              <Typography fontWeight={600} fontSize={10} mb={0.5}>
-                Reason
-              </Typography>
-
-              <TextField
-                fullWidth
-                size="small"
-                multiline
-                rows={2}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            </Box>
-
-            {/* TOGGLE */}
-            {/* <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mt={1}
-            >
-              <Typography fontWeight={600} fontSize={10}>
-                Awarded at event
-              </Typography>
-
-              <Switch
-                checked={isEvent}
-                onChange={(e) => setIsEvent(e.target.checked)}
-                size="small"
-              />
-            </Box> */}
+            <TextField
+              fullWidth
+              size="small"
+              label="Reason"
+              multiline
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
           </Stack>
         </Box>
 
         {/* FOOTER */}
         <Box
           sx={{
-            px: 3,
-            py: 2,
+            px: 2,
+            pt: 2,
+            pb: "calc(env(safe-area-inset-bottom) + 16px)",
             borderTop: "1px solid #e5e7eb",
             display: "flex",
-            gap: 2,
+            gap: 1.5,
+            flexDirection: isMobile ? "column" : "row",
+            position: "sticky",
+            bottom: 0,
+            bgcolor: "white",
+            zIndex: 10, // keep footer above content
           }}
         >
-          <Button variant="contained" fullWidth onClick={submit}>
+          <Button variant="contained" fullWidth size="large" onClick={submit}>
             Submit
           </Button>
 
-          <Button fullWidth onClick={onClose}>
+          <Button fullWidth size="large" onClick={handleCancel}>
             Cancel
           </Button>
         </Box>

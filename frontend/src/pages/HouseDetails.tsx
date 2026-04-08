@@ -9,6 +9,8 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { alpha } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
@@ -27,6 +29,8 @@ interface HouseDetailsProps {
 export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [house, setHouse] = useState<House | null>(null);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -80,12 +84,12 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
       minPoints?: number,
       maxPoints?: number,
     ) => {
-      if (!houseId) return; // use houseId instead of id
+      const effectiveHouseId = houseId || Number(id); // use current house id if undefined
+      if (!effectiveHouseId) return;
 
       setLoading(true);
       try {
-        // use houseId instead of id
-        let url = `/points?page=${page}&limit=${limit}&houseId=${houseId}`;
+        let url = `/points?page=${page}&limit=${limit}&houseId=${effectiveHouseId}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
         if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
         if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
@@ -102,7 +106,7 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         setLoading(false);
       }
     },
-    [pageSize],
+    [pageSize, id],
   );
 
   // LOAD LOGS ON INITIAL MOUNT
@@ -162,46 +166,66 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
       >
         {role === "teacher" && (
           <>
-            <Tooltip title="Edit class">
-              <IconButton
-                onClick={() => setEditModalOpen(true)}
-                sx={{
-                  position: "absolute",
-                  top: 16,
-                  right: 60,
-                  backgroundColor: "white",
-                  boxShadow: 2,
-                  "&:hover": { backgroundColor: "#f0f0f0" },
-                }}
-              >
-                <EditIcon />
-              </IconButton>
-            </Tooltip>
+            {/* Responsive Buttons */}
+            <Box
+              display="flex"
+              flexDirection={isMobile ? "row" : "column"}
+              position="absolute"
+              top={isMobile ? 8 : 16}
+              right={16}
+              gap={1}
+            >
+              <Tooltip title="Edit class">
+                <IconButton
+                  onClick={() => setEditModalOpen(true)}
+                  sx={{
+                    width: isMobile ? 36 : 40,
+                    height: isMobile ? 36 : 40,
+                    backgroundColor: "white",
+                    boxShadow: 2,
+                    "&:hover": { backgroundColor: "#f0f0f0" },
+                  }}
+                >
+                  <EditIcon fontSize={isMobile ? "small" : "medium"} />
+                </IconButton>
+              </Tooltip>
 
-            <Tooltip title="Delete class">
-              <IconButton
-                onClick={handleDelete}
-                sx={{
-                  position: "absolute",
-                  top: 16,
-                  right: 16,
-                  backgroundColor: "white",
-                  boxShadow: 2,
-                  "&:hover": { backgroundColor: "#f0f0f0" },
-                }}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
+              <Tooltip title="Delete class">
+                <IconButton
+                  onClick={handleDelete}
+                  sx={{
+                    width: isMobile ? 36 : 40,
+                    height: isMobile ? 36 : 40,
+                    backgroundColor: "white",
+                    boxShadow: 2,
+                    "&:hover": { backgroundColor: "#f0f0f0" },
+                  }}
+                >
+                  <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </>
         )}
 
-        <Box display="flex" alignItems="center" gap={2}>
-          <Avatar src={houseImageUrl} sx={{ width: 150, height: 150 }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={2}
+          flexDirection={isMobile ? "column" : "row"}
+        >
+          <Avatar
+            src={houseImageUrl}
+            sx={{
+              width: 150,
+              height: 150,
+              mb: isMobile ? 2 : 0,
+            }}
+          >
             {house.name?.[0]}
           </Avatar>
 
-          <Box>
+          <Box textAlign={isMobile ? "center" : "left"}>
             <Typography variant="h5" fontWeight={700}>
               {house.name}
             </Typography>

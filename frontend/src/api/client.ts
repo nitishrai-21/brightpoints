@@ -2,7 +2,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://brightpoints.onrender.com",
+  baseURL: "http://localhost:8000",
 });
 
 // build full static file URL
@@ -20,3 +20,11 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// make sure errors always propagate correctly
+// api.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     return Promise.reject(error);
+//   },
+// );

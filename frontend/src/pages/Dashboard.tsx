@@ -12,7 +12,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import SchoolIcon from "@mui/icons-material/School";
 import { api } from "../api/client";
-import TeacherView from "./TeacherView";
+import LogsView from "./LogsView";
 import StudentView from "./StudentView";
 import HouseDetails from "./HouseDetails";
 import Profile from "./Profile";
@@ -90,6 +90,7 @@ export default function Dashboard({
       maxPoints?: number,
     ) => {
       setLoading(true);
+
       try {
         let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
         if (houseId) url += `&houseId=${houseId}`;
@@ -97,16 +98,11 @@ export default function Dashboard({
         if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
         if (maxPoints !== undefined) url += `&maxPoints=${maxPoints}`;
 
-        const res = await api.get<{
-          data: Log[];
-          total_pages: number;
-          total: number;
-        }>(url);
+        const res = await api.get(url);
+
         setLogs(res.data.data);
         setTotalPages(res.data.total_pages);
         setTotalItems(res.data.total);
-      } catch (err) {
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -134,19 +130,20 @@ export default function Dashboard({
       active: location.pathname === "/dashboard",
       onClick: () => navigate("/dashboard"),
     },
-    role === "teacher"
-      ? {
-          label: "Points Log",
-          icon: <ListAltIcon />,
-          active: location.pathname === "/dashboard/teacher",
-          onClick: () => navigate("/dashboard/teacher"),
-        }
-      : {
-          label: "My Points",
-          icon: <SchoolIcon />,
-          active: location.pathname === "/dashboard/student",
-          onClick: () => navigate("/dashboard/student"),
-        },
+    // role === "teacher"
+    // ?
+    {
+      label: "Points Log",
+      icon: <ListAltIcon />,
+      active: location.pathname === "/dashboard/logs",
+      onClick: () => navigate("/dashboard/logs"),
+    },
+    // : {
+    //     label: "My Points",
+    //     icon: <SchoolIcon />,
+    //     active: location.pathname === "/dashboard/student",
+    //     onClick: () => navigate("/dashboard/student"),
+    //   },
   ];
 
   return (
@@ -154,7 +151,13 @@ export default function Dashboard({
       <Routes>
         <Route
           path="/"
-          element={<SummaryView houses={houses} onHouseCreated={loadHouses} />}
+          element={
+            <SummaryView
+              houses={houses}
+              role={role}
+              onHouseCreated={loadHouses}
+            />
+          }
         />
         <Route
           path="house/:id"
@@ -166,29 +169,29 @@ export default function Dashboard({
           }
         />
         <Route
-          path="teacher"
+          path="logs"
           element={
-            role === "teacher" && (
-              <TeacherView
-                logs={logs}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                pageSize={pageSize}
-                setPageSize={setPageSize}
-                loadLogs={loadAllLogs}
-                loading={loading}
-                houses={houses}
-                onAddPoints={() => setShowAddPoints(true)}
-                role="teacher"
-                user={user}
-              />
-            )
+            // (role === "teacher" || role === "student") && (
+            <LogsView
+              logs={logs}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              loadLogs={loadAllLogs}
+              loading={loading}
+              houses={houses}
+              onAddPoints={() => setShowAddPoints(true)}
+              role={role}
+              user={user}
+            />
+            // )
           }
         />
-        <Route
+        {/* <Route
           path="student"
           element={role === "student" && <StudentView houses={houses} />}
-        />
+        /> */}
         <Route
           path="profile"
           element={<Profile user={user} onUserUpdate={setUser} />}

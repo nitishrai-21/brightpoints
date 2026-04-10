@@ -12,16 +12,19 @@ import {
 import { getImageUrl } from "../api/client";
 import CreateHouseModal from "./CreateHouseModal";
 import { useNavigate } from "react-router-dom";
-import type { House } from "../types";
+import type { House, Role } from "../types";
 import AddIcon from "@mui/icons-material/Add";
+import { canAddClasses } from "../permissions";
 
 interface SummaryViewProps {
   houses: House[];
+  role: Role;
   onHouseCreated?: () => void;
 }
 
 export default function SummaryView({
   houses,
+  role,
   onHouseCreated,
 }: SummaryViewProps) {
   const sorted = [...houses].sort((a, b) => b.total_points - a.total_points);
@@ -55,13 +58,15 @@ export default function SummaryView({
         <Typography variant="h5" fontWeight={700}>
           Total Points
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => setShowCreateHouse(true)}
-          sx={{ textTransform: "none" }}
-        >
-          + Add Class
-        </Button>
+        {canAddClasses(role) && (
+          <Button
+            variant="contained"
+            onClick={() => setShowCreateHouse(true)}
+            sx={{ textTransform: "none" }}
+          >
+            + Add Class
+          </Button>
+        )}
       </Box>
 
       {/* MOBILE HEADER */}

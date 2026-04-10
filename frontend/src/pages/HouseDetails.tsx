@@ -17,7 +17,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { api, getImageUrl } from "../api/client";
 import CreateHouseModal from "../components/CreateHouseModal";
-import TeacherView from "./TeacherView";
+import LogsView from "./LogsView";
 import type { House, Log, Role } from "../types";
 import ErrorPage from "../components/ErrorPage";
 
@@ -66,7 +66,7 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         setError({ code: 404, message: "House not found" });
       } else {
         setError({
-          code: 500,
+          code: err.response?.status,
           message: "Failed to load house. Please try again later.",
         });
       }
@@ -243,7 +243,7 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
       </Paper>
 
       {/* TEACHER VIEW */}
-      <TeacherView
+      <LogsView
         logs={logs}
         totalPages={totalPages}
         totalItems={totalItems}

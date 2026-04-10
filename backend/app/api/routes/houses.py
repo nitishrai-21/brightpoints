@@ -8,6 +8,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.my_model import House, User
 from app.schemas.house import HouseOut, HouseCreate, HouseUpdate
 from app.api.utils import validation_error, pydantic_error_response
+from app.core.access import apply_house_access, require_teacher
 from pydantic import ValidationError
 
 router = APIRouter(prefix="/houses", tags=["houses"])
@@ -20,33 +21,45 @@ logger = logging.getLogger(__name__)
 
 # ---------------- Helper ----------------
 def get_house_for_school(db: Session, house_id: int, user: User) -> House:
-    house = db.query(House).filter(
+
+    query = db.query(House).filter(
         House.id == house_id,
         House.school_id == user.school_id
-    ).first()
-    if not house:
-        raise HTTPException(status_code=404, detail="House not found in your school")
-    return house
+    )
 
+    query = apply_house_access(query, user, house_id)
+
+    house = query.first()
+
+    if not house:
+        raise HTTPException(
+            status_code=404,
+            detail="House not found in your school or access denied"
+        )
+
+    return house
 
 # ---------------- CRUD ----------------
 @router.get("", response_model=list[HouseOut])
 def get_houses(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
-        houses = db.query(House).filter(House.school_id == current_user.school_id).all()
-        return houses
+        query = db.query(House).filter(
+          House.school_id == current_user.school_id
+        )
+        # query = apply_house_access(query, current_user)
+        return query.all()
     except Exception as e:
         logger.error(f"Failed to fetch houses: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{house_id}", response_model=HouseOut)
-def get_house(house_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    try:
-        return get_house_for_school(db, house_id, current_user)
-    except Exception as e:
-        logger.error(f"Failed to fetch house {house_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+def get_house(
+    house_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return get_house_for_school(db, house_id, current_user)
 
 
 @router.post("", response_model=HouseOut)
@@ -59,6 +72,7 @@ def create_house(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_teacher(current_user)
     try:
         house_in = HouseCreate(
             name=name,
@@ -114,6 +128,7 @@ def update_house(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_teacher(current_user)
     house = get_house_for_school(db, house_id, current_user)
 
     # Validate input using schema
@@ -167,6 +182,7 @@ def delete_house(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_teacher(current_user)
     house = get_house_for_school(db, house_id, current_user)
 
     if house.logo_url:

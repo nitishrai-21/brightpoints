@@ -6,6 +6,7 @@ from app.api.deps import get_db, get_current_user
 from app.schemas.points import PointsCreate
 from app.services.points_service import award_points
 from app.models.my_model import PointsLog, User, House
+from app.core.access import apply_points_access, require_teacher
 
 router = APIRouter()
 
@@ -15,6 +16,9 @@ def add_points(data: PointsCreate, current_user: User = Depends(get_current_user
     """
     Add points for a house.
     """
+    # ROLE CHECK
+    require_teacher(current_user)
+
     # Ensure house belongs to the current user's school
     house = db.query(House).filter(
         House.id == data.house_id,
@@ -52,6 +56,9 @@ def get_logs(
 
     # ---------------- Tenant Isolation ----------------
     query = query.filter(House.school_id == current_user.school_id)
+
+    # ROLE-BASED ACCESS
+    query = apply_points_access(query, current_user)
 
     # Apply filters
     if house_id is not None:

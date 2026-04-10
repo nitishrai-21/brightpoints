@@ -14,6 +14,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
+import { useToast } from "../context/ToastContext";
 
 export default function AddPointsModal({
   open,
@@ -25,6 +26,7 @@ export default function AddPointsModal({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const { showToast } = useToast();
   const [points, setPoints] = useState<number | "">("");
   const [reason, setReason] = useState("");
   const [selectedHouse, setSelectedHouse] = useState<number | "">(
@@ -51,20 +53,35 @@ export default function AddPointsModal({
   }, [houseId, open]);
 
   const submit = async () => {
-    if (!selectedHouse) return; // guard against empty selection
+    if (!selectedHouse) {
+      showToast("Please select a class", "warning");
+      return;
+    }
 
-    await api.post("/points", {
-      house_id: selectedHouse,
-      points: Number(points),
-      reason,
-      date_awarded: date || null,
-    });
+    try {
+      await api.post("/points", {
+        house_id: selectedHouse,
+        points: Number(points),
+        reason,
+        date_awarded: date || null,
+      });
 
-    onSuccess?.();
+      showToast("Points added successfully", "success");
 
-    resetForm();
+      onSuccess?.();
+      resetForm();
+      onClose();
+    } catch (err: any) {
+      const status = err?.response?.status;
 
-    onClose();
+      if (status === 403) {
+        showToast("You are not allowed to add points", "error");
+      } else if (status >= 500) {
+        showToast("Server error. Please try again later", "error");
+      } else {
+        showToast("Failed to add points", "error");
+      }
+    }
   };
 
   const handleCancel = () => {

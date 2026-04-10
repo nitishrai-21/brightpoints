@@ -29,9 +29,10 @@ class User(TimestampMixin, Base):
     email = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=True)
     role = Column(String, default="student")  # teacher / student / admin
-    class_group = Column(String, nullable=True)
+    house_id = Column(Integer, ForeignKey("houses.id"), nullable=True)
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=True)
 
+    house = relationship("House", back_populates="users")
     school = relationship("School", back_populates="users")
     points_given = relationship("PointsLog", back_populates="teacher")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
@@ -55,7 +56,7 @@ class House(TimestampMixin, Base):
     __tablename__ = "houses"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     logo_url = Column(String, nullable=True)
     total_points = Column(Integer, default=0)
@@ -67,6 +68,7 @@ class House(TimestampMixin, Base):
     logs = relationship("PointsLog", back_populates="house")
     # students = relationship("Student", back_populates="house")
     school = relationship("School", back_populates="houses")
+    users = relationship("User", back_populates="house")
 
 
 # ----------------- Student -----------------

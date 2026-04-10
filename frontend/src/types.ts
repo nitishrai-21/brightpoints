@@ -33,7 +33,7 @@ export interface User {
 }
 
 // -------------------- TEACHER VIEW PROPS --------------------
-export interface TeacherViewProps {
+export interface LogsViewProps {
   logs: Log[];
   totalPages: number;
   totalItems: number;

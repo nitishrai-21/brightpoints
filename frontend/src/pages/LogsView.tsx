@@ -1,4 +1,4 @@
-// src/pages/TeacherView.tsx
+// src/pages/LogsView.tsx
 import {
   Box,
   Typography,
@@ -23,10 +23,12 @@ import { useEffect, useState } from "react";
 
 import PointsList from "../components/PointsList";
 import SkeletonList from "../components/SkeletonList";
-import type { TeacherViewProps } from "../types";
+import type { LogsViewProps } from "../types";
+import { canAddPoints } from "../permissions";
+import { useToast } from "../context/ToastContext";
 import ErrorPage from "../components/ErrorPage";
 
-export default function TeacherView({
+export default function LogsView({
   logs,
   totalPages,
   totalItems,
@@ -36,19 +38,20 @@ export default function TeacherView({
   onAddPoints,
   houses,
   role,
-}: TeacherViewProps) {
+}: LogsViewProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { showToast } = useToast();
 
   // ---------------- Role check ----------------
-  if (role !== "teacher") {
-    return (
-      <ErrorPage
-        code={403}
-        message="Access denied. Only teachers can view this page."
-      />
-    );
-  }
+  // if (role !== "teacher") {
+  //   return (
+  //     <ErrorPage
+  //       code={403}
+  //       message="Access denied. Only teachers can view this page."
+  //     />
+  //   );
+  // }
 
   // ---------------- State ----------------
   const [page, setPage] = useState(1);
@@ -74,6 +77,7 @@ export default function TeacherView({
   // ---------------- Fetch logs ----------------
   const fetchLogs = async () => {
     setLoading(true);
+
     try {
       await loadLogs(
         debouncedFilters.house ? Number(debouncedFilters.house) : undefined,
@@ -88,6 +92,16 @@ export default function TeacherView({
           ? Number(debouncedFilters.maxPoints)
           : undefined,
       );
+
+      console.log("success");
+    } catch (err: any) {
+      const status = err?.response?.status;
+
+      if (status === 403) {
+        showToast("You are not allowed to view logs (403)", "error");
+      } else {
+        showToast("Failed to load logs", "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -196,9 +210,11 @@ export default function TeacherView({
             >
               {filtersVisible ? "Close Filters" : "Filters"}
             </Button>
-            <Button variant="contained" onClick={onAddPoints}>
-              + Add Points
-            </Button>
+            {canAddPoints(role) && (
+              <Button variant="contained" onClick={onAddPoints}>
+                + Add Points
+              </Button>
+            )}
           </Stack>
         )}
       </Stack>
@@ -284,22 +300,23 @@ export default function TeacherView({
       {/* MOBILE FABs */}
       {isMobile && (
         <>
-          <Fab
-            variant="extended"
-            color="primary"
-            sx={{
-              position: "fixed",
-              bottom: 80,
-              right: 16,
-              zIndex: 1000,
-              textTransform: "none",
-            }}
-            onClick={onAddPoints}
-          >
-            <AddIcon sx={{ mr: 1 }} />
-            Add Points
-          </Fab>
-
+          {canAddPoints(role) && (
+            <Fab
+              variant="extended"
+              color="primary"
+              sx={{
+                position: "fixed",
+                bottom: 80,
+                right: 16,
+                zIndex: 1000,
+                textTransform: "none",
+              }}
+              onClick={onAddPoints}
+            >
+              <AddIcon sx={{ mr: 1 }} />
+              Add Points
+            </Fab>
+          )}
           <Fab
             variant="extended"
             color="secondary"

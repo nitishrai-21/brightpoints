@@ -41,6 +41,8 @@ export interface User {
   email: string;
   role: Role | string; // keep string for unknown roles
   school_id: number;
+  house_name?: string;
+  is_active?: boolean;
 }
 
 // -------------------- TEACHER VIEW PROPS --------------------

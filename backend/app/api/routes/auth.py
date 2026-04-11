@@ -1,7 +1,7 @@
 # backend/app/api/routes/auth.py
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from uuid import uuid4
 import requests
 from google.oauth2 import id_token
@@ -12,6 +12,7 @@ from app.models.my_model import School, User, RefreshToken
 from app.core.security import create_access_token
 from app.schemas.user import RefreshRequest, UpdateProfileRequest
 from app.core.config import settings
+from app.core.access import require_teacher
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -131,6 +132,82 @@ def update_profile(
     db.commit()
     return {"message": "Profile updated", "name": current_user.name}
 
+
+# ---------------- Get Users In My School ----------------
+@router.get("/users")
+def get_users_in_my_school(
+    page: int = 1,
+    limit: int = 10,
+    search: str = "",
+    role: str = "",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_teacher(current_user)
+    query = db.query(User).filter(User.school_id == current_user.school_id)
+
+    if search:
+        query = query.filter(User.email.ilike(f"%{search}%"))
+
+    if role:
+        query = query.filter(User.role == role)
+
+    total = query.count()
+
+    users = (
+        query
+        .options(joinedload(User.house))
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "users": [
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "role": u.role,
+                "school_id": u.school_id,
+                "house_id": u.house_id,
+                "house_name": u.house.name if u.house else None,
+            }
+            for u in users
+        ],
+        "total": total,
+        "total_pages": (total + limit - 1) // limit,
+    }
+
+@router.put("/users/{user_id}")
+def update_user(
+    user_id: int,
+    role: str = None,
+    is_active: bool = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.school_id == current_user.school_id
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if role:
+        user.role = role
+
+    if is_active is not None:
+        user.is_active = is_active
+
+    db.commit()
+    db.refresh(user)
+
+    return user
 
 # ---------------- Refresh Token ----------------
 @router.post("/refresh")

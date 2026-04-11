@@ -21,10 +21,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// make sure errors always propagate correctly
-// api.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     return Promise.reject(error);
-//   },
-// );
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      delete api.defaults.headers.common["Authorization"];
+
+      window.location.href = "/";
+    }
+
+    return Promise.reject(error);
+  },
+);

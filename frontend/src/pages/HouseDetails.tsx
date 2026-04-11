@@ -11,7 +11,13 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
+
 import { alpha } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -19,18 +25,25 @@ import { api, getImageUrl } from "../api/client";
 import CreateHouseModal from "../components/CreateHouseModal";
 import LogsView from "./LogsView";
 import type { House, Log, Role } from "../types";
+import { useToast } from "../context/ToastContext";
 import ErrorPage from "../components/ErrorPage";
 
 interface HouseDetailsProps {
   onAddPoints: () => void;
   role?: Role;
+  onHouseUpdated?: () => void;
 }
 
-export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
+export default function HouseDetails({
+  onAddPoints,
+  role,
+  onHouseUpdated,
+}: HouseDetailsProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { showToast } = useToast();
 
   const [house, setHouse] = useState<House | null>(null);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -39,12 +52,18 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
     code?: number;
     message?: string;
   } | null>(null);
+
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
-  // modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // =========================================================
+  // DELETE CONFIRMATION STATE
+  // =========================================================
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(false);
 
   // ---------------- Load house ----------------
   useEffect(() => {
@@ -84,7 +103,7 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
       minPoints?: number,
       maxPoints?: number,
     ) => {
-      const effectiveHouseId = houseId || Number(id); // use current house id if undefined
+      const effectiveHouseId = houseId || Number(id);
       if (!effectiveHouseId) return;
 
       setLoading(true);
@@ -109,28 +128,35 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
     [pageSize, id],
   );
 
-  // LOAD LOGS ON INITIAL MOUNT
   useEffect(() => {
-    if (id) {
-      loadLogs(Number(id));
-    }
+    if (id) loadLogs(Number(id));
   }, [id, loadLogs]);
 
-  // ---------------- Delete house ----------------
-  const handleDelete = async () => {
+  // =========================================================
+  // DELETE FLOW
+  // =========================================================
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
     if (!house) return;
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete the class "${house.name}"? This action cannot be undone.`,
-    );
-    if (!confirmDelete) return;
+
+    setPendingDelete(true);
 
     try {
       await api.delete(`/houses/${house.id}`);
-      alert("Class deleted successfully.");
-      navigate("/dashboard", { state: { refresh: true } });
+
+      showToast("Class deleted successfully", "success");
+
+      onHouseUpdated?.();
+      navigate("/dashboard");
     } catch (err) {
       console.error("Failed to delete house", err);
-      alert("Failed to delete house. Try again.");
+      showToast("Failed to delete class", "error");
+    } finally {
+      setPendingDelete(false);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -165,47 +191,44 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         }}
       >
         {role === "teacher" && (
-          <>
-            {/* Responsive Buttons */}
-            <Box
-              display="flex"
-              flexDirection={isMobile ? "row" : "column"}
-              position="absolute"
-              top={isMobile ? 8 : 16}
-              right={16}
-              gap={1}
-            >
-              <Tooltip title="Edit class">
-                <IconButton
-                  onClick={() => setEditModalOpen(true)}
-                  sx={{
-                    width: isMobile ? 36 : 40,
-                    height: isMobile ? 36 : 40,
-                    backgroundColor: "white",
-                    boxShadow: 2,
-                    "&:hover": { backgroundColor: "#f0f0f0" },
-                  }}
-                >
-                  <EditIcon fontSize={isMobile ? "small" : "medium"} />
-                </IconButton>
-              </Tooltip>
+          <Box
+            display="flex"
+            flexDirection={isMobile ? "row" : "column"}
+            position="absolute"
+            top={isMobile ? 8 : 16}
+            right={16}
+            gap={1}
+          >
+            <Tooltip title="Edit class">
+              <IconButton
+                onClick={() => setEditModalOpen(true)}
+                sx={{
+                  width: isMobile ? 36 : 40,
+                  height: isMobile ? 36 : 40,
+                  backgroundColor: "white",
+                  boxShadow: 2,
+                  "&:hover": { backgroundColor: "#f0f0f0" },
+                }}
+              >
+                <EditIcon fontSize={isMobile ? "small" : "medium"} />
+              </IconButton>
+            </Tooltip>
 
-              <Tooltip title="Delete class">
-                <IconButton
-                  onClick={handleDelete}
-                  sx={{
-                    width: isMobile ? 36 : 40,
-                    height: isMobile ? 36 : 40,
-                    backgroundColor: "white",
-                    boxShadow: 2,
-                    "&:hover": { backgroundColor: "#f0f0f0" },
-                  }}
-                >
-                  <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </>
+            <Tooltip title="Delete class">
+              <IconButton
+                onClick={handleDeleteClick}
+                sx={{
+                  width: isMobile ? 36 : 40,
+                  height: isMobile ? 36 : 40,
+                  backgroundColor: "white",
+                  boxShadow: 2,
+                  "&:hover": { backgroundColor: "#f0f0f0" },
+                }}
+              >
+                <DeleteIcon fontSize={isMobile ? "small" : "medium"} />
+              </IconButton>
+            </Tooltip>
+          </Box>
         )}
 
         <Box
@@ -216,11 +239,7 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         >
           <Avatar
             src={houseImageUrl}
-            sx={{
-              width: 150,
-              height: 150,
-              mb: isMobile ? 2 : 0,
-            }}
+            sx={{ width: 150, height: 150, mb: isMobile ? 2 : 0 }}
           >
             {house.name?.[0]}
           </Avatar>
@@ -256,15 +275,46 @@ export default function HouseDetails({ onAddPoints, role }: HouseDetailsProps) {
         role={role}
       />
 
-      {/* EDIT HOUSE MODAL */}
+      {/* EDIT MODAL */}
       {house && (
         <CreateHouseModal
           open={editModalOpen}
           onClose={() => setEditModalOpen(false)}
-          onCreated={loadHouse}
+          onCreated={() => {
+            loadHouse();
+            onHouseUpdated?.();
+          }}
           house={house}
         />
       )}
+
+      {/* ===================================================== */}
+      {/*  CONFIRMATION DIALOG  */}
+      {/* ===================================================== */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+
+        <DialogContent>
+          Are you sure you want to delete the class <b>{house?.name}</b>? This
+          action cannot be undone.
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            disabled={pendingDelete}
+            onClick={confirmDelete}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

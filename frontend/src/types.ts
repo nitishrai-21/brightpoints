@@ -1,7 +1,18 @@
 // src/types.ts
+import type { ReactNode } from "react";
 
 // -------------------- ROLE --------------------
-export type Role = "teacher" | "student";
+export type Role = "teacher" | "student" | "admin";
+
+// -------------------- NAV BUTTON --------------------
+export interface NavButton {
+  label: string;
+  icon: ReactNode;
+  active: boolean;
+  onClick: () => void;
+  hidden?: boolean;
+  badge?: number;
+}
 
 // -------------------- HOUSE --------------------
 export interface House {

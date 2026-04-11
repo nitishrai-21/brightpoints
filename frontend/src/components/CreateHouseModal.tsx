@@ -14,6 +14,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import { api, getImageUrl } from "../api/client";
+import { useToast } from "../context/ToastContext";
 import type { House } from "../types";
 
 interface CreateHouseModalProps {
@@ -31,6 +32,7 @@ export default function CreateHouseModal({
 }: CreateHouseModalProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { showToast } = useToast();
 
   const [name, setName] = useState("");
   const [motto, setMotto] = useState("");
@@ -103,8 +105,18 @@ export default function CreateHouseModal({
       }
 
       if (onCreated) await onCreated();
+
+      showToast(
+        house ? "Class updated successfully" : "Class created successfully",
+        "success",
+      );
+
       onClose();
     } catch (err: any) {
+      showToast(
+        house ? "Failed to update class" : "Failed to create class",
+        "error",
+      );
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail;
         if (typeof detail === "string") {

@@ -10,16 +10,28 @@ import {
 import { CircularProgress } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import PeopleIcon from "@mui/icons-material/People";
 import SchoolIcon from "@mui/icons-material/School";
+
 import { api } from "../api/client";
 import LogsView from "./LogsView";
 import StudentView from "./StudentView";
+import UsersList from "./UsersList";
 import HouseDetails from "./HouseDetails";
 import Profile from "./Profile";
 import SummaryView from "../components/SummaryView";
 import AddPointsDrawer from "../components/AddPointsModal";
 import Layout from "../components/Layout";
-import type { House, Log, User, DashboardProps, Role } from "../types";
+import { teachersOnly } from "../permissions";
+
+import type {
+  House,
+  Log,
+  User,
+  DashboardProps,
+  Role,
+  NavButton,
+} from "../types";
 
 export default function Dashboard({
   setAccessToken,
@@ -36,6 +48,7 @@ export default function Dashboard({
     }
   }, [location.state]);
 
+  const [reloadKey, setReloadKey] = useState(0);
   const [role, setRole] = useState<Role | null>(null);
   const [user, setUser] = useState<User>({
     id: 0,
@@ -57,7 +70,7 @@ export default function Dashboard({
   useEffect(() => {
     loadHouses();
     loadCurrentUser();
-  }, []);
+  }, [reloadKey]);
 
   const loadHouses = async () => {
     try {
@@ -92,7 +105,10 @@ export default function Dashboard({
       setLoading(true);
 
       try {
-        let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
+        let url = `/points?page=${page}&limit=${limit}&search=${encodeURIComponent(
+          search,
+        )}`;
+
         if (houseId) url += `&houseId=${houseId}`;
         if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
         if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
@@ -118,36 +134,46 @@ export default function Dashboard({
     setRefreshToken(null);
   };
 
-  if (!role) {
-    return <CircularProgress sx={{ display: "block", mx: "auto", mt: 10 }} />;
-  }
+  const refreshHouses = () => {
+    setReloadKey((prev) => prev + 1);
+  };
 
-  // ---------------- NAV BUTTONS ----------------
-  const navButtons = [
-    {
+  // ---------------- NAV BUILDER ----------------
+  const buildNavButtons = (): NavButton[] => {
+    const nav: NavButton[] = [];
+
+    nav.push({
       label: "Dashboard",
       icon: <DashboardIcon />,
       active: location.pathname === "/dashboard",
       onClick: () => navigate("/dashboard"),
-    },
-    // role === "teacher"
-    // ?
-    {
+    });
+
+    nav.push({
       label: "Points Log",
       icon: <ListAltIcon />,
       active: location.pathname === "/dashboard/logs",
       onClick: () => navigate("/dashboard/logs"),
-    },
-    // : {
-    //     label: "My Points",
-    //     icon: <SchoolIcon />,
-    //     active: location.pathname === "/dashboard/student",
-    //     onClick: () => navigate("/dashboard/student"),
-    //   },
-  ];
+    });
+
+    if (role && teachersOnly(role)) {
+      nav.push({
+        label: "Users",
+        icon: <PeopleIcon />,
+        active: location.pathname === "/dashboard/users",
+        onClick: () => navigate("/dashboard/users"),
+      });
+    }
+
+    return nav;
+  };
+
+  if (!role) {
+    return <CircularProgress sx={{ display: "block", mx: "auto", mt: 10 }} />;
+  }
 
   return (
-    <Layout user={user} onLogout={handleLogout} navButtons={navButtons}>
+    <Layout user={user} onLogout={handleLogout} navButtons={buildNavButtons()}>
       <Routes>
         <Route
           path="/"
@@ -155,23 +181,25 @@ export default function Dashboard({
             <SummaryView
               houses={houses}
               role={role}
-              onHouseCreated={loadHouses}
+              onHouseCreated={refreshHouses}
             />
           }
         />
+
         <Route
           path="house/:id"
           element={
             <HouseDetails
               onAddPoints={() => setShowAddPoints(true)}
               role={role}
+              onHouseUpdated={refreshHouses}
             />
           }
         />
+
         <Route
           path="logs"
           element={
-            // (role === "teacher" || role === "student") && (
             <LogsView
               logs={logs}
               totalPages={totalPages}
@@ -185,17 +213,16 @@ export default function Dashboard({
               role={role}
               user={user}
             />
-            // )
           }
         />
-        {/* <Route
-          path="student"
-          element={role === "student" && <StudentView houses={houses} />}
-        /> */}
+
+        <Route path="users" element={<UsersList />} />
+
         <Route
           path="profile"
           element={<Profile user={user} onUserUpdate={setUser} />}
         />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
 
@@ -203,7 +230,7 @@ export default function Dashboard({
         <AddPointsDrawer
           open={showAddPoints}
           onClose={() => setShowAddPoints(false)}
-          onSuccess={() => loadAllLogs()}
+          onSuccess={() => setReloadKey((k) => k + 1)}
           houses={houses}
         />
       )}

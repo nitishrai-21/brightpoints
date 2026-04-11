@@ -44,13 +44,14 @@ export default function AddPointsModal({
 
   // Sync houseId if modal opens with a different value
   useEffect(() => {
-    if (open) {
-      setSelectedHouse(houseId ?? "");
-    } else {
-      // Reset form when modal closes
+    setSelectedHouse(houseId ?? "");
+  }, [houseId]);
+
+  useEffect(() => {
+    if (!open) {
       resetForm();
     }
-  }, [houseId, open]);
+  }, [open]);
 
   const submit = async () => {
     if (!selectedHouse) {

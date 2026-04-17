@@ -27,7 +27,8 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { User, Role } from "../types";
+import type { User } from "../types";
+import { type Role } from "../permissions";
 
 export default function UsersList() {
   const theme = useTheme();

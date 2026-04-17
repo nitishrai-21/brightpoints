@@ -7,7 +7,8 @@ import {
   Avatar,
   Stack,
 } from "@mui/material";
-import type { House, Role } from "../types";
+import type { House } from "../types";
+import { type Role } from "../permissions";
 import { getImageUrl } from "../api/client";
 
 interface StudentViewProps {

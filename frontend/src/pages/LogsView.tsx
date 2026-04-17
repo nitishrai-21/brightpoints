@@ -46,7 +46,7 @@ export default function LogsView({
 
   const [filtersVisible, setFiltersVisible] = useState(false);
 
-  // ✅ SAFE DEFAULT (prevents crash in HouseDetails)
+  // SAFE DEFAULT (prevents crash in HouseDetails)
   const safeFilters = filters ?? {
     search: "",
     teacher: "",
@@ -124,7 +124,9 @@ export default function LogsView({
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" mb={2}>
-        <Typography variant="h5">Points Log</Typography>
+        <Typography variant="h5" fontWeight={700}>
+          Points Log
+        </Typography>
 
         {!isMobile && (
           <Stack direction="row" spacing={1}>

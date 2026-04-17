@@ -91,6 +91,11 @@ export default function Dashboard({
     }
   };
 
+  const refreshLogs = useCallback(() => {
+    setLogsPage(1);
+    setLogsFilters((prev) => ({ ...prev }));
+  }, []);
+
   // ---------------- LOGS LOADER (FIXED) ----------------
   const loadAllLogs = useCallback(async () => {
     const requestId = ++logsRequestRef.current;
@@ -233,8 +238,7 @@ export default function Dashboard({
           onClose={() => setShowAddPoints(false)}
           houses={houses}
           onSuccess={() => {
-            loadAllLogs();
-            setLogsFilters((prev) => ({ ...prev }));
+            refreshLogs();
           }}
         />
       )}

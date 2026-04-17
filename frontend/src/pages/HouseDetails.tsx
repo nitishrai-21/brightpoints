@@ -28,7 +28,7 @@ import LogsView from "./LogsView";
 import ErrorPage from "../components/ErrorPage";
 
 import type { House } from "../types";
-import { type Role } from "../permissions";
+import { hasPermission, type Role } from "../permissions";
 import { useToast } from "../context/ToastContext";
 import { useLogsController } from "../hooks/useLogsController";
 
@@ -148,8 +148,8 @@ export default function HouseDetails({
             : "#f5f5f5",
         }}
       >
-        {/* TEACHER ACTIONS */}
-        {role === "teacher" && (
+        {/* ACTIONS */}
+        {hasPermission(role, "ADD_CLASSES") && (
           <Box
             display="flex"
             flexDirection={isMobile ? "row" : "column"}

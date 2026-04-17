@@ -8,7 +8,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.my_model import House, User
 from app.schemas.house import HouseOut, HouseCreate, HouseUpdate
 from app.api.utils import validation_error, pydantic_error_response
-from app.core.access import apply_house_access, require_teacher
+from app.core.access import apply_house_access, require_teacher_or_admin
 from pydantic import ValidationError
 
 router = APIRouter(prefix="/houses", tags=["houses"])
@@ -72,7 +72,7 @@ def create_house(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    require_teacher(current_user)
+    require_teacher_or_admin(current_user)
     try:
         house_in = HouseCreate(
             name=name,
@@ -128,7 +128,7 @@ def update_house(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    require_teacher(current_user)
+    require_teacher_or_admin(current_user)
     house = get_house_for_school(db, house_id, current_user)
 
     # Validate input using schema
@@ -182,7 +182,7 @@ def delete_house(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    require_teacher(current_user)
+    require_teacher_or_admin(current_user)
     house = get_house_for_school(db, house_id, current_user)
 
     if house.logo_url:

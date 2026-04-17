@@ -8,14 +8,24 @@ from app.models.my_model import User, House, PointsLog
 # HELPERS
 # =========================================================
 
-def require_teacher(user: User):
+def require_teacher_or_admin(user: User):
     """
-    Allow only teachers (and optionally admins if you extend later)
+    Allow teachers and admin role
     """
-    if user.role != "teacher":
+    if user.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Teacher only action"
+        )
+
+def require_admin(user: User):
+    """
+    Allow only admin
+    """
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin only action"
         )
 
 

@@ -1,5 +1,5 @@
 // src/pages/HouseDetails.tsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Typography,
@@ -21,23 +21,29 @@ import {
 import { alpha } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+
 import { api, getImageUrl } from "../api/client";
 import CreateHouseModal from "../components/CreateHouseModal";
 import LogsView from "./LogsView";
-import type { House, Log, Role } from "../types";
-import { useToast } from "../context/ToastContext";
 import ErrorPage from "../components/ErrorPage";
+
+import type { House } from "../types";
+import { type Role } from "../permissions";
+import { useToast } from "../context/ToastContext";
+import { useLogsController } from "../hooks/useLogsController";
 
 interface HouseDetailsProps {
   onAddPoints: () => void;
   role?: Role;
   onHouseUpdated?: () => void;
+  onLogsUpdated?: () => void;
 }
 
 export default function HouseDetails({
   onAddPoints,
   role,
   onHouseUpdated,
+  onLogsUpdated,
 }: HouseDetailsProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -46,100 +52,60 @@ export default function HouseDetails({
   const { showToast } = useToast();
 
   const [house, setHouse] = useState<House | null>(null);
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{
-    code?: number;
-    message?: string;
-  } | null>(null);
-
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [error, setError] = useState<any>(null);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
-
-  // =========================================================
-  // DELETE CONFIRMATION STATE
-  // =========================================================
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
 
-  // ---------------- Load house ----------------
-  useEffect(() => {
+  const {
+    logs,
+    loading,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    filters,
+    setFilters,
+    setHouseId,
+    reload,
+  } = useLogsController();
+
+  // ---------------- LOAD HOUSE ----------------
+  const loadHouse = () => {
     if (!id) return;
+
+    api
+      .get(`/houses/${id}`)
+      .then((res) => {
+        setHouse(res.data);
+        setError(null);
+      })
+      .catch((err) => {
+        setError({
+          code: err.response?.status,
+          message: "Failed to load house",
+        });
+      });
+  };
+
+  useEffect(() => {
     loadHouse();
   }, [id]);
 
-  const loadHouse = async () => {
-    if (!id) return;
-
-    try {
-      const res = await api.get(`/houses/${id}`);
-      setHouse(res.data);
-      setError(null);
-    } catch (err: any) {
-      console.error("Failed to load house", err);
-
-      if (err.response?.status === 404) {
-        setError({ code: 404, message: "House not found" });
-      } else {
-        setError({
-          code: err.response?.status,
-          message: "Failed to load house. Please try again later.",
-        });
-      }
-    }
-  };
-
-  // ---------------- Logs loader ----------------
-  const loadLogs = useCallback(
-    async (
-      houseId?: number,
-      page = 1,
-      limit = pageSize,
-      search = "",
-      teacher = "",
-      minPoints?: number,
-      maxPoints?: number,
-    ) => {
-      const effectiveHouseId = houseId || Number(id);
-      if (!effectiveHouseId) return;
-
-      setLoading(true);
-      try {
-        let url = `/points?page=${page}&limit=${limit}&houseId=${effectiveHouseId}`;
-        if (search) url += `&search=${encodeURIComponent(search)}`;
-        if (teacher) url += `&teacher=${encodeURIComponent(teacher)}`;
-        if (minPoints !== undefined) url += `&minPoints=${minPoints}`;
-        if (maxPoints !== undefined) url += `&maxPoints=${maxPoints}`;
-
-        const res = await api.get(url);
-
-        setLogs(res.data.data as Log[]);
-        setTotalPages(res.data.total_pages);
-        setTotalItems(res.data.total);
-      } catch (err) {
-        console.error("Failed to load logs", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [pageSize, id],
-  );
-
+  // ---------------- SET HOUSE ID FOR LOGS ----------------
   useEffect(() => {
-    if (id) loadLogs(Number(id));
-  }, [id, loadLogs]);
+    if (id) setHouseId(Number(id));
+  }, [id, setHouseId]);
 
-  // =========================================================
-  // DELETE FLOW
-  // =========================================================
+  // ---------------- DELETE ----------------
   const handleDeleteClick = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = async () => {
+  const handleDelete = async () => {
     if (!house) return;
 
     setPendingDelete(true);
@@ -160,25 +126,17 @@ export default function HouseDetails({
     }
   };
 
-  if (error) {
-    return (
-      <ErrorPage
-        code={error.code}
-        message={error.message}
-        redirectTo="/dashboard"
-      />
-    );
-  }
+  if (error) return <ErrorPage {...error} redirectTo="/dashboard" />;
 
   if (!house) {
-    return <CircularProgress sx={{ display: "block", mx: "auto", mt: 10 }} />;
+    return <CircularProgress sx={{ mt: 10, mx: "auto", display: "block" }} />;
   }
 
-  const houseImageUrl = getImageUrl(house.logo_url) || undefined;
+  const image = getImageUrl(house.logo_url);
 
   return (
     <Box>
-      {/* HOUSE HEADER */}
+      {/* ================= HOUSE HEADER ================= */}
       <Paper
         sx={{
           p: 3,
@@ -190,6 +148,7 @@ export default function HouseDetails({
             : "#f5f5f5",
         }}
       >
+        {/* TEACHER ACTIONS */}
         {role === "teacher" && (
           <Box
             display="flex"
@@ -231,6 +190,7 @@ export default function HouseDetails({
           </Box>
         )}
 
+        {/* HOUSE INFO */}
         <Box
           display="flex"
           alignItems="center"
@@ -238,8 +198,8 @@ export default function HouseDetails({
           flexDirection={isMobile ? "column" : "row"}
         >
           <Avatar
-            src={houseImageUrl}
-            sx={{ width: 150, height: 150, mb: isMobile ? 2 : 0 }}
+            src={image ?? undefined}
+            sx={{ width: 120, height: 120, mb: isMobile ? 2 : 0 }}
           >
             {house.name?.[0]}
           </Avatar>
@@ -252,6 +212,7 @@ export default function HouseDetails({
             <Typography fontWeight={400}>
               {house.description || "No description"}
             </Typography>
+
             <Typography color="text.secondary">{house.motto}</Typography>
 
             <Typography fontWeight={600} mt={1}>
@@ -261,55 +222,61 @@ export default function HouseDetails({
         </Box>
       </Paper>
 
-      {/* TEACHER VIEW */}
+      {/* ================= LOGS ================= */}
       <LogsView
         logs={logs}
         totalPages={totalPages}
         totalItems={totalItems}
         pageSize={pageSize}
         setPageSize={setPageSize}
-        loadLogs={loadLogs}
+        loadLogs={reload}
         loading={loading}
         houses={[house]}
-        onAddPoints={onAddPoints}
         role={role}
+        onAddPoints={onAddPoints}
+        page={page}
+        setPage={setPage}
+        filters={filters}
+        setFilters={setFilters}
+        onLogsChange={() => {
+          setPage(1);
+          reload();
+          onLogsUpdated?.();
+        }}
       />
 
-      {/* EDIT MODAL */}
-      {house && (
-        <CreateHouseModal
-          open={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
-          onCreated={() => {
-            loadHouse();
-            onHouseUpdated?.();
-          }}
-          house={house}
-        />
-      )}
+      {/* ================= EDIT MODAL ================= */}
+      <CreateHouseModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        house={house}
+        onCreated={() => {
+          setEditModalOpen(false);
+          loadHouse();
+          onHouseUpdated?.();
+        }}
+      />
 
-      {/* ===================================================== */}
-      {/*  CONFIRMATION DIALOG  */}
-      {/* ===================================================== */}
+      {/* ================= DELETE DIALOG ================= */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
       >
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle>Delete Class</DialogTitle>
 
         <DialogContent>
-          Are you sure you want to delete the class <b>{house?.name}</b>? This
-          action cannot be undone.
+          Are you sure you want to delete <b>{house.name}</b>? This action
+          cannot be undone.
         </DialogContent>
 
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
 
           <Button
-            variant="contained"
             color="error"
+            variant="contained"
+            onClick={handleDelete}
             disabled={pendingDelete}
-            onClick={confirmDelete}
           >
             Delete
           </Button>

@@ -1,8 +1,6 @@
 // src/types.ts
 import type { ReactNode } from "react";
-
-// -------------------- ROLE --------------------
-export type Role = "teacher" | "student" | "admin";
+import type { Role } from "./permissions";
 
 // -------------------- NAV BUTTON --------------------
 export interface NavButton {
@@ -39,7 +37,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: Role | string; // keep string for unknown roles
+  role: Role;
   school_id: number;
   house_name?: string;
   is_active?: boolean;
@@ -47,11 +45,12 @@ export interface User {
 
 // -------------------- TEACHER VIEW PROPS --------------------
 export interface LogsViewProps {
-  logs: Log[];
+  logs: any[];
   totalPages: number;
   totalItems: number;
   pageSize: number;
   setPageSize: (size: number) => void;
+
   loadLogs: (
     houseId?: number,
     page?: number,
@@ -61,11 +60,16 @@ export interface LogsViewProps {
     minPoints?: number,
     maxPoints?: number,
   ) => Promise<void>;
-  loading: boolean;
+
   onAddPoints: () => void;
-  houses: House[];
-  role?: Role;
-  user?: User;
+  houses: any[];
+  role: Role;
+
+  // NEW (safe additions)
+  page: number;
+  setPage: (page: number) => void;
+  filters: any;
+  setFilters: (f: any) => void;
 }
 
 // -------------------- DASHBOARD PROPS --------------------

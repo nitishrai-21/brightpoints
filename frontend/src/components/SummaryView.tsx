@@ -12,9 +12,9 @@ import {
 import { getImageUrl } from "../api/client";
 import CreateHouseModal from "./CreateHouseModal";
 import { useNavigate } from "react-router-dom";
-import type { House, Role } from "../types";
+import type { House } from "../types";
 import AddIcon from "@mui/icons-material/Add";
-import { canAddClasses } from "../permissions";
+import { hasPermission, type Role } from "../permissions";
 
 interface SummaryViewProps {
   houses: House[];
@@ -58,7 +58,7 @@ export default function SummaryView({
         <Typography variant="h5" fontWeight={700}>
           Total Points
         </Typography>
-        {canAddClasses(role) && (
+        {hasPermission(role, "ADD_CLASSES") && (
           <Button
             variant="contained"
             onClick={() => setShowCreateHouse(true)}
@@ -245,22 +245,24 @@ export default function SummaryView({
       </Box>
 
       {/* MOBILE FAB ONLY */}
-      <Fab
-        variant="extended"
-        color="primary"
-        sx={{
-          position: "fixed",
-          bottom: 80,
-          right: 16,
-          display: { xs: "flex", sm: "none" },
-          zIndex: 1000,
-          textTransform: "none",
-        }}
-        onClick={() => setShowCreateHouse(true)}
-      >
-        <AddIcon sx={{ mr: 1 }} />
-        Add Class
-      </Fab>
+      {hasPermission(role, "ADD_CLASSES") && (
+        <Fab
+          variant="extended"
+          color="primary"
+          sx={{
+            position: "fixed",
+            bottom: 80,
+            right: 16,
+            display: { xs: "flex", sm: "none" },
+            zIndex: 1000,
+            textTransform: "none",
+          }}
+          onClick={() => setShowCreateHouse(true)}
+        >
+          <AddIcon sx={{ mr: 1 }} />
+          Add Class
+        </Fab>
+      )}
 
       {/* CREATE HOUSE MODAL */}
       {showCreateHouse && (

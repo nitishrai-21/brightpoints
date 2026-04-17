@@ -6,7 +6,7 @@ from app.api.deps import get_db, get_current_user
 from app.schemas.points import PointsCreate
 from app.services.points_service import award_points
 from app.models.my_model import PointsLog, User, House
-from app.core.access import apply_points_access, require_teacher
+from app.core.access import apply_points_access, require_teacher_or_admin
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ def add_points(data: PointsCreate, current_user: User = Depends(get_current_user
     Add points for a house.
     """
     # ROLE CHECK
-    require_teacher(current_user)
+    require_teacher_or_admin(current_user)
 
     # Ensure house belongs to the current user's school
     house = db.query(House).filter(

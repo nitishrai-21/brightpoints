@@ -12,7 +12,7 @@ from app.models.my_model import School, User, RefreshToken
 from app.core.security import create_access_token
 from app.schemas.user import RefreshRequest, UpdateProfileRequest
 from app.core.config import settings
-from app.core.access import require_teacher
+from app.core.access import require_admin
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -143,7 +143,7 @@ def get_users_in_my_school(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    require_teacher(current_user)
+    require_admin(current_user)
     query = db.query(User).filter(User.school_id == current_user.school_id)
 
     if search:

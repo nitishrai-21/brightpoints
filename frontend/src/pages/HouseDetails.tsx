@@ -71,7 +71,7 @@ export default function HouseDetails({
     setFilters,
     setHouseId,
     reload,
-  } = useLogsController();
+  } = useLogsController(Number(id));
 
   // ---------------- LOAD HOUSE ----------------
   const loadHouse = () => {

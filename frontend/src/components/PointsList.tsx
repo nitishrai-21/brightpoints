@@ -78,6 +78,9 @@ export default function PointsList({ logs }: PointsListProps) {
                 fontWeight={600}
                 mb={0.5}
               >
+                <Box component="span" sx={{ color: "#2563eb" }}>
+                  Event Date:{" "}
+                </Box>
                 {new Date(log.awarded_at).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -118,6 +121,14 @@ export default function PointsList({ logs }: PointsListProps) {
               <Typography fontSize={10} color="text.secondary">
                 {log.teacher_name}
                 {log.reason ? ` • ${log.reason}` : ""}
+              </Typography>
+              <Typography fontSize={9} color="text.secondary">
+                Recorded on:{" "}
+                {new Date(log.created_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </Typography>
             </Box>
 

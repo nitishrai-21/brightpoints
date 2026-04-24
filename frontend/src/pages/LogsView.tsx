@@ -76,6 +76,12 @@ export default function LogsView({
         fullWidth={isMobile}
         size="small"
         value={safeFilters.house}
+        displayEmpty
+        renderValue={(selected) => {
+          if (!selected) return "Select House...";
+          const house = houses.find((h: any) => h.id === selected);
+          return house?.name || "Select House...";
+        }}
         onChange={(e) => handleFilterChange("house", e.target.value)}
       >
         <MenuItem value="">Select House...</MenuItem>
@@ -153,14 +159,34 @@ export default function LogsView({
         anchor="bottom"
         open={isMobile && filtersVisible}
         onClose={() => setFiltersVisible(false)}
+        PaperProps={{
+          sx: {
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            maxHeight: "80vh",
+          },
+        }}
       >
-        <Box display="flex" justifyContent="space-between">
-          <Typography>Filters</Typography>
-          <IconButton onClick={() => setFiltersVisible(false)}>
-            <CloseIcon />
-          </IconButton>
+        <Box
+          sx={{
+            p: 2,
+            width: "100%",
+            boxSizing: "border-box",
+            overflowY: "auto",
+          }}
+        >
+          <Box display="flex" justifyContent="space-between" mb={2}>
+            <Typography fontWeight={600}>Filters</Typography>
+            <IconButton onClick={() => setFiltersVisible(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Force column layout inside drawer */}
+          <Stack direction="column" spacing={2}>
+            {FiltersContent}
+          </Stack>
         </Box>
-        {FiltersContent}
       </Drawer>
 
       <Paper sx={{ p: 1 }}>
@@ -174,7 +200,7 @@ export default function LogsView({
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
-                setPage?.(1); // ✅ FIX: safe call (prevents crash in HouseDetails)
+                setPage?.(1); // safe call (prevents crash in HouseDetails)
               }}
               size="small"
               sx={{ minWidth: 90 }}

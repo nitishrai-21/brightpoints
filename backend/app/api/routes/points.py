@@ -100,6 +100,7 @@ def get_logs(
                 "awarded_at": log.awarded_at,
                 "house_name": log.house.name,
                 "teacher_name": log.teacher.name,
+                "created_at" : log.created_at
             }
             for log in logs
         ],

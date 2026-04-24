@@ -75,7 +75,7 @@ def sso_callback(code: str = None, state: int = None, db: Session = Depends(get_
         ).json()
 
         idinfo = id_token.verify_oauth2_token(
-            token_res["id_token"], google_requests.Request(), school.client_id, clock_skew_in_seconds=60
+            token_res["id_token"], google_requests.Request(), school.client_id, clock_skew_in_seconds=180
         )
         email = idinfo["email"]
     else:

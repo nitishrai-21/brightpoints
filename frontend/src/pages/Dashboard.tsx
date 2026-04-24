@@ -239,6 +239,7 @@ export default function Dashboard({
           houses={houses}
           onSuccess={() => {
             refreshLogs();
+            loadHouses();
           }}
         />
       )}

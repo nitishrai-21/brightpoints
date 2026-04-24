@@ -186,7 +186,17 @@ export default function Dashboard({
             />
           }
         />
-
+        <Route
+          path="/public"
+          element={
+            <SummaryView
+              houses={houses}
+              role={role}
+              onRefresh={loadHouses} // NEW
+              isPublic={true} // NEW
+            />
+          }
+        />
         <Route
           path="house/:id"
           element={

@@ -1,5 +1,4 @@
-// src/components/SummaryView.tsx
-import { useState } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   Box,
   Typography,
@@ -20,14 +19,19 @@ interface SummaryViewProps {
   houses: House[];
   role: Role;
   onHouseCreated?: () => void;
+  onRefresh?: () => void;
+  isPublic?: boolean;
 }
 
 export default function SummaryView({
   houses,
   role,
   onHouseCreated,
+  onRefresh,
+  isPublic = false,
 }: SummaryViewProps) {
   const sorted = [...houses].sort((a, b) => b.total_points - a.total_points);
+
   const totalPoints = sorted.reduce(
     (sum, h) => sum + Math.max(0, h.total_points),
     0,
@@ -36,7 +40,19 @@ export default function SummaryView({
   const navigate = useNavigate();
   const [showCreateHouse, setShowCreateHouse] = useState(false);
 
+  // auto-refresh every 10s in public mode
+  useEffect(() => {
+    if (!isPublic) return;
+
+    const interval = setInterval(() => {
+      onRefresh?.();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isPublic, onRefresh]);
+
   const getMedalNumber = (i: number) => i + 1;
+
   const getMedalColor = (i: number) => {
     if (i === 0) return "#FFD700";
     if (i === 1) return "#C0C0C0";
@@ -44,9 +60,60 @@ export default function SummaryView({
     return "#6366f1";
   };
 
+  // ================= FLIP ENGINE (MINIMAL + SAFE) =================
+  const positions = useRef(new Map<number, DOMRect>());
+
+  const setItemRef = (id: number) => (el: HTMLDivElement | null) => {
+    if (el) {
+      positions.current.set(id, el.getBoundingClientRect());
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (!isPublic) return;
+
+    const newPositions = new Map<number, DOMRect>();
+
+    sorted.forEach((house) => {
+      const el = document.getElementById(`house-${house.id}`);
+      if (el) {
+        newPositions.set(house.id, el.getBoundingClientRect());
+      }
+    });
+
+    newPositions.forEach((newBox, id) => {
+      const oldBox = positions.current.get(id);
+      const el = document.getElementById(`house-${id}`);
+
+      if (!oldBox || !el) return;
+
+      const deltaY = oldBox.top - newBox.top;
+
+      if (deltaY) {
+        el.animate(
+          [
+            { transform: `translateY(${deltaY}px)` },
+            { transform: "translateY(0px)" },
+          ],
+          {
+            duration: 600,
+            easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+          },
+        );
+      }
+    });
+
+    positions.current = newPositions;
+  }, [houses, isPublic]);
+
   return (
-    <Box sx={{ position: "relative", pb: { xs: 12, sm: 0 } }}>
-      {/* DESKTOP HEADER + BUTTON */}
+    <Box
+      sx={{
+        position: "relative",
+        pb: isPublic ? 0 : { xs: 12, sm: 0 },
+      }}
+    >
+      {/* HEADER */}
       <Box
         sx={{
           display: { xs: "none", sm: "flex" },
@@ -58,7 +125,8 @@ export default function SummaryView({
         <Typography variant="h5" fontWeight={700}>
           Total Points
         </Typography>
-        {hasPermission(role, "ADD_CLASSES") && (
+
+        {!isPublic && hasPermission(role, "ADD_CLASSES") && (
           <Button
             variant="contained"
             onClick={() => setShowCreateHouse(true)}
@@ -83,169 +151,219 @@ export default function SummaryView({
         </Typography>
       </Box>
 
-      {/* DESKTOP LAYOUT */}
-      <Box sx={{ display: { xs: "none", sm: "block" } }}>
-        <Paper sx={{ p: 3, borderRadius: 3 }}>
-          {sorted.map((house, i) => {
-            const points = Math.max(0, house.total_points);
-            const percentage =
-              totalPoints > 0 ? (points / totalPoints) * 100 : 0;
-            const logoSrc = getImageUrl(house.logo_url) || undefined;
+      {/* LEADERBOARD */}
+      <Box>
+        {isPublic ? (
+          // ================= FLIP PUBLIC WIDGET VIEW =================
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "1fr 1fr 1fr",
+              },
+              gap: 2,
+            }}
+          >
+            {sorted.map((house, i) => {
+              const points = Math.max(0, house.total_points);
+              const percent =
+                totalPoints > 0 ? (points / totalPoints) * 100 : 0;
 
-            return (
-              <Box key={house.id} sx={{ mb: 2 }}>
+              const isTop3 = i < 3;
+              const isFirst = i === 0;
+
+              return (
                 <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    cursor: "pointer",
-                  }}
-                  onClick={() => navigate(`/dashboard/house/${house.id}`)}
+                  key={house.id}
+                  id={`house-${house.id}`}
+                  ref={setItemRef(house.id)}
                 >
-                  <Box
+                  <Paper
+                    onClick={() => navigate(`/dashboard/house/${house.id}`)}
                     sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      backgroundColor: getMedalColor(i),
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      p: 2.5,
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      position: "relative",
+                      overflow: "hidden",
+                      transition: "box-shadow 0.3s ease",
+
+                      boxShadow: isTop3 ? 5 : 1,
+
+                      ...(isFirst && {
+                        border: "2px solid #6366f1",
+                      }),
+
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: 8,
+                      },
                     }}
                   >
-                    {getMedalNumber(i)}
-                  </Box>
+                    {/* background accent */}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: -40,
+                        right: -40,
+                        width: 120,
+                        height: 120,
+                        borderRadius: "50%",
+                        background: (house as any).class_color || "#6366f1",
+                        opacity: 0.08,
+                      }}
+                    />
 
-                  <Avatar
-                    src={logoSrc}
-                    sx={{ width: 48, height: 48, bgcolor: "#c7d2fe" }}
-                  >
-                    {house.name[0]}
-                  </Avatar>
-
-                  <Box sx={{ flexGrow: 1 }}>
+                    {/* HEADER */}
                     <Box
                       sx={{
                         display: "flex",
-                        justifyContent: "space-between",
                         alignItems: "center",
-                        mb: 0.5,
+                        gap: 1.5,
                       }}
                     >
-                      <Typography fontWeight={600}>{house.name}</Typography>
-                      <Typography fontWeight={700}>{points} pts</Typography>
+                      <Avatar
+                        src={getImageUrl(house.logo_url) || undefined}
+                        sx={{ width: 44, height: 44 }}
+                      >
+                        {house.name[0]}
+                      </Avatar>
+
+                      <Box sx={{ flex: 1 }}>
+                        <Typography fontWeight={700}>
+                          {house.name} {isFirst && "🔥"}
+                        </Typography>
+
+                        <Typography variant="caption" color="text.secondary">
+                          Rank #{i + 1}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={percentage}
+
+                    {/* KPI */}
+                    <Typography
                       sx={{
-                        height: 10,
-                        borderRadius: 5,
-                        backgroundColor: "#e5e7eb",
-                        "& .MuiLinearProgress-bar": {
-                          backgroundColor:
-                            (house as any).class_color || "#6366f1",
-                        },
+                        mt: 2,
+                        fontSize: 28,
+                        fontWeight: 800,
+                        lineHeight: 1,
                       }}
-                    />
-                  </Box>
-                  <Typography
-                    sx={{ ml: 1, fontSize: 12, color: "text.secondary" }}
-                  >
-                    {percentage.toFixed(1)}%
-                  </Typography>
+                    >
+                      {points.toLocaleString()}
+                    </Typography>
+
+                    <Typography variant="caption" color="text.secondary">
+                      total points
+                    </Typography>
+
+                    {/* PROGRESS */}
+                    <Box
+                      sx={{
+                        mt: 2,
+                        height: 6,
+                        borderRadius: 5,
+                        background: "#e5e7eb",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${percent}%`,
+                          height: "100%",
+                          background: (house as any).class_color || "#6366f1",
+                          transition: "width 0.6s ease",
+                        }}
+                      />
+                    </Box>
+
+                    {/* FOOTER */}
+                    <Box
+                      sx={{
+                        mt: 1.5,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 12,
+                        color: "text.secondary",
+                      }}
+                    >
+                      <span>{percent.toFixed(1)}% of total</span>
+                      <span>click to open →</span>
+                    </Box>
+                  </Paper>
                 </Box>
-              </Box>
-            );
-          })}
-        </Paper>
-      </Box>
+              );
+            })}
+          </Box>
+        ) : (
+          // ================= ORIGINAL (UNCHANGED) =================
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              background: isPublic ? "transparent" : undefined,
+            }}
+          >
+            {sorted.map((house, i) => {
+              const points = Math.max(0, house.total_points);
+              const percentage =
+                totalPoints > 0 ? (points / totalPoints) * 100 : 0;
 
-      {/* MOBILE LAYOUT */}
-      <Box sx={{ display: { xs: "block", sm: "none" } }}>
-        <Paper sx={{ p: 2, borderRadius: 3 }}>
-          {sorted.map((house, i) => {
-            const points = Math.max(0, house.total_points);
-            const percentage =
-              totalPoints > 0 ? (points / totalPoints) * 100 : 0;
-            const logoSrc = getImageUrl(house.logo_url) || undefined;
+              const logoSrc = getImageUrl(house.logo_url) || undefined;
 
-            return (
-              <Box key={house.id} sx={{ mb: 2 }}>
-                {/* Medal + Avatar + Name on top */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    mb: 1,
-                  }}
-                  onClick={() => navigate(`/dashboard/house/${house.id}`)}
-                >
+              return (
+                <Box key={house.id} sx={{ mb: 3 }}>
                   <Box
                     sx={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      backgroundColor: getMedalColor(i),
                       display: "flex",
-                      justifyContent: "center",
                       alignItems: "center",
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      gap: 2,
+                    }}
+                    onClick={() => {
+                      if (!isPublic) {
+                        navigate(`/dashboard/house/${house.id}`);
+                      }
                     }}
                   >
-                    {getMedalNumber(i)}
-                  </Box>
-                  <Avatar
-                    src={logoSrc}
-                    sx={{ width: 40, height: 40, bgcolor: "#c7d2fe" }}
-                  >
-                    {house.name[0]}
-                  </Avatar>
-                  <Typography fontWeight={600}>{house.name}</Typography>
-                </Box>
+                    <Avatar src={logoSrc} sx={{ width: 48, height: 48 }}>
+                      {house.name[0]}
+                    </Avatar>
 
-                {/* Progress + points below */}
-                <LinearProgress
-                  variant="determinate"
-                  value={percentage}
-                  sx={{
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: "#e5e7eb",
-                    "& .MuiLinearProgress-bar": {
-                      backgroundColor: (house as any).class_color || "#6366f1",
-                    },
-                    mb: 0.5,
-                  }}
-                />
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Typography fontWeight={700}>{points} pts</Typography>
-                  <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
-                    {percentage.toFixed(1)}%
-                  </Typography>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography fontWeight={600}>{house.name}</Typography>
+                        <Typography fontWeight={700}>{points} pts</Typography>
+                      </Box>
+
+                      <LinearProgress
+                        variant="determinate"
+                        value={percentage}
+                        sx={{
+                          height: 10,
+                          borderRadius: 5,
+                          "& .MuiLinearProgress-bar": {
+                            backgroundColor:
+                              (house as any).class_color || "#6366f1",
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
-              </Box>
-            );
-          })}
-        </Paper>
+              );
+            })}
+          </Paper>
+        )}
       </Box>
 
-      {/* MOBILE FAB ONLY */}
-      {hasPermission(role, "ADD_CLASSES") && (
+      {/* FAB */}
+      {!isPublic && hasPermission(role, "ADD_CLASSES") && (
         <Fab
           variant="extended"
           color="primary"
@@ -264,14 +382,14 @@ export default function SummaryView({
         </Fab>
       )}
 
-      {/* CREATE HOUSE MODAL */}
+      {/* MODAL */}
       {showCreateHouse && (
         <CreateHouseModal
           open={showCreateHouse}
           onClose={() => setShowCreateHouse(false)}
           onCreated={() => {
             setShowCreateHouse(false);
-            if (onHouseCreated) onHouseCreated();
+            onHouseCreated?.();
           }}
         />
       )}

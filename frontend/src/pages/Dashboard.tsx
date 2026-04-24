@@ -7,7 +7,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
-import { CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import PeopleIcon from "@mui/icons-material/People";
@@ -67,6 +67,17 @@ export default function Dashboard({
     loadHouses();
     loadCurrentUser();
   }, []);
+
+  const shuffleScores = () => {
+    setHouses((prev) =>
+      [...prev]
+        .map((h) => ({
+          ...h,
+          total_points: h.total_points + Math.floor(Math.random() * 100),
+        }))
+        .sort((a, b) => b.total_points - a.total_points),
+    );
+  };
 
   const loadHouses = async () => {
     try {
@@ -189,12 +200,28 @@ export default function Dashboard({
         <Route
           path="/public"
           element={
-            <SummaryView
-              houses={houses}
-              role={role}
-              onRefresh={loadHouses} // NEW
-              isPublic={true} // NEW
-            />
+            <Box>
+              {/* ✅ TEST CONTROL (ONLY PUBLIC VIEW) */}
+              <Button
+                variant="contained"
+                onClick={shuffleScores}
+                sx={{
+                  position: "fixed",
+                  top: 80,
+                  right: 16,
+                  zIndex: 2000,
+                }}
+              >
+                Shuffle Public Scores
+              </Button>
+
+              <SummaryView
+                houses={houses}
+                role={role}
+                onRefresh={loadHouses}
+                isPublic={true}
+              />
+            </Box>
           }
         />
         <Route

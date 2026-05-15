@@ -76,6 +76,7 @@ export interface LogsViewProps {
 export interface DashboardProps {
   setAccessToken: (token: string | null) => void;
   setRefreshToken: (token: string | null) => void;
+  onLogout: () => void;
 }
 
 // -------------------- HOUSE DETAILS PROPS --------------------

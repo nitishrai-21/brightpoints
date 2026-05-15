@@ -119,6 +119,7 @@ export default function App() {
                 <Dashboard
                   setAccessToken={setAccessToken}
                   setRefreshToken={setRefreshToken}
+                  onLogout={logout}
                 />
               </RequireAuth>
             }

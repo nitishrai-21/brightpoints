@@ -27,6 +27,7 @@ import type { House, Log, User, DashboardProps, NavButton } from "../types";
 export default function Dashboard({
   setAccessToken,
   setRefreshToken,
+  onLogout,
 }: DashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -185,7 +186,7 @@ export default function Dashboard({
   }
 
   return (
-    <Layout user={user} onLogout={() => {}} navButtons={buildNavButtons()}>
+    <Layout user={user} onLogout={onLogout} navButtons={buildNavButtons()}>
       <Routes>
         <Route
           path="/"

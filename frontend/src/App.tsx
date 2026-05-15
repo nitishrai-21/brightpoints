@@ -11,13 +11,9 @@ import ErrorPage from "./components/ErrorPage";
 import RequireAuth from "./auth/RequireAuth";
 
 export default function App() {
-  const [accessToken, setAccessToken] = useState<string | null>(
-    localStorage.getItem("access_token"),
-  );
-
-  const [refreshToken, setRefreshToken] = useState<string | null>(
-    localStorage.getItem("refresh_token"),
-  );
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // ---------------- FIX 2: safer logout (global-safe) ----------------
   const logout = () => {
@@ -32,6 +28,40 @@ export default function App() {
     window.location.href = "/"; // ensures full reset
   };
 
+  useEffect(() => {
+    const initAuth = async () => {
+      const storedRefresh = localStorage.getItem("refresh_token");
+      // no refresh token → show login page
+      if (!storedRefresh) {
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        // immediately validate/refresh token
+        const res = await api.post("/auth/refresh", {
+          refresh_token: storedRefresh,
+        });
+
+        setAccessToken(res.data.access_token);
+        setRefreshToken(res.data.refresh_token);
+
+        localStorage.setItem("access_token", res.data.access_token);
+        localStorage.setItem("refresh_token", res.data.refresh_token);
+
+        api.defaults.headers.common["Authorization"] =
+          `Bearer ${res.data.access_token}`;
+      } catch (err) {
+        // expired refresh token
+        logout();
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
+
   // ---------------- FIX 3: sync localStorage changes ----------------
   useEffect(() => {
     const syncAuth = () => {
@@ -45,15 +75,13 @@ export default function App() {
 
   // ---------------- FIX 4: refresh interval (no stale closure) ----------------
   useEffect(() => {
+    if (!refreshToken) return;
+
     const interval = setInterval(
       async () => {
-        const token = localStorage.getItem("refresh_token");
-
-        if (!token) return logout();
-
         try {
           const res = await api.post("/auth/refresh", {
-            refresh_token: token,
+            refresh_token: refreshToken,
           });
 
           setAccessToken(res.data.access_token);
@@ -69,7 +97,7 @@ export default function App() {
     );
 
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshToken]);
 
   // ---------------- FIX 5: keep axios header in sync ----------------
   useEffect(() => {
@@ -79,6 +107,10 @@ export default function App() {
       delete api.defaults.headers.common["Authorization"];
     }
   }, [accessToken]);
+
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <ThemeProvider theme={theme}>
